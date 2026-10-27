@@ -1,0 +1,183 @@
+// BTT-Plugin-Name: Nyan Cat
+// BTT-Plugin-Identifier: net.nllsn.nyancat
+// BTT-Plugin-Type: TouchBar
+// BTT-Plugin-Icon: sparkles
+//
+// Nyan Cat animado para la Touch Bar, con accesorios según lo que estés haciendo.
+// ARCHIVO GENERADO por generar.py (editar NyanCat.swift.in, no este).
+import Cocoa
+import CoreAudio
+import IOKit.ps
+
+// Tiras de 12 cuadros (138x60 px c/u), PNG en base64.
+private let sprites: [String: String] = [
+    "base": "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",
+    "base_matrix": "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",
+    "base_destenida": "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",
+    "notas": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAADQ0lEQVR42u3d2Q3CMBQAwQ2iCvqvjTbCH9dXEIdiPFNC9CTLWG8pAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4tvgEAADAiNZz6/Vic3K3AQAAdnx/Wdfb/WVZPnJ/OfisAAAAAAAAY/HAAwAAAAAAkEQbAAAkvcUv5+ThkmNmAAAYPL3Ff8/Jw/3ljZmxwQMAAAAAAJBEGwAAAAAAAF909AkAgKS3MDMM7n42zAwAIL2FmWHX95e72XhnZmzwAAAAAAAAJNEGAAAAAABAEm0AJKOEmSHpLTPDizMDADJKmBlGTG8x58xkgwcAAAAAACCJNgAAAAAAAJJoA5JRwsyQjJL0FtJbvHamAMgoYWaQ3mKG9Bb/caZkgwcAAAAAAIA88AAAAAAAACTRRjJKmBlIegvpLaS3ABklzAzSW0hvIb0F2eABAAAAAAAgDzwAAAAAAABJtJH0FklvmRmkt5DeAr6TUXKOIL2F9BbSW0hvAbOdI1t+d7XBAwAAAAAAkEQbAAAAAAAASbSR9BbSWyS9BUhvIb0F0ltIbyG9BUyQ3oItM2ODBwAAAAAAIIk2AAAAAAAAkmgj6S2S3gKkt5DeQnrLzCC9hfQWIL3FBOkt2PLXKjZ4AAAAAAAAkmgDAAAAAAAgiTaS3gKkt5DeIuktJFOQ3gKQ3kJ6iwnSW2aGLTNjgwcAAAAAACCJNgAAAAAAAJJoA5LeQnqLpLeQTEF6C0B6C+ktpLeYYGbw1yrZ4AEAAAAAAEiiDQAAAAAAgCTaSHoL6S2S3kIyBektAOktpLeQ3kJ6C+ktyAYPAAAAAABAHngAAAAAAABIoo2kt0h6C+ktpLcA5whIbyG9hfQW0luAcyQbPAAAAAAAAEm0AQAAAAAAkEQbSW8hmULSW4BzBEB6C+ktpLcA5whkgwcAAAAAACAPPAAAAAAAACTRRpIpJL0FOEcAQDIF6S3AOQKQDR4AAAAAAIA88AAAAAAAAJBEG0lvAUlvAQBIbwHSWwCQDR4AAAAAAIA88AAAAAAAAJBEG5D0FgAAgPQWAEA2eAAAAAAAAPLAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB7dwEcNFNW6kSj/gAAAABJRU5ErkJggg==",
+    "lentes_hacker": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACjklEQVR42u3csa3CMBSG0d+IPszCBkzOBsyCJwgVEkWsBDACi3OqVzw38EncgHwTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA6K16CJ8yn+f7ndLis/nuttXQ5CwDQME3TvDhLXI9Zmj0eZ4x3zqITnfxPJ633PeVcepwFANgyn7Tmz9Z3qu+cRSejdLLz9gMAAAAAAIzFDzwAAAAAAACD2XsJVj21Wu0TZ2OVnlV+VvnFNVLXjXWiE5pzwnIz7c+RXmd1ohOd/Eknrfe99jurE6v8rPLzjOwZWSc6YXU+2fj9aq+zOtHJEJ24wQMAAAAAABAr2gAAAAAAAIgVbd9UXl1f0PEsscrP1VHXSOO6sU50gvkEnaATrPLDM7I5Vic6MZ+YT9BJ3OABAAAAAACIFW0AAAAAAADEirYfUmst3zhLXAl0dVQzmtGJTjCfoBN0gpkEzWhGJzoxn5hP0Enc4AEAAAAAAIgfeAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEZwAyvhDA3M8t6NAAAAAElFTkSuQmCC",
+    "audifonos": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACxElEQVR42u3csW3DMBQE0JOhOTgJvWZG8CSchIswhWBbCGAnRRQp9nuVEKQgpCvO+PhMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC+N3kFz9Vax95naK35TgCAfoKcICcAgH6inyAnNydRAAAAAAAA+F8MeAAAAAAAAOKKtrzSetcR1qyOdh6sBCIzyAn6gH4iJ3IiJ3Kik+gkyAxygn6CnOx7Hhs8AAAAAAAAcUUbAAAAAAAAG5q9AoiVQGRGZuRETgAAnQSZQU4AYoMHAAAAAACAGPAAAAAAAACQxIAHAAAAAAAgBjwAAAAAAADEgAcAAAAAAIAY8AAAAAAAAMSABwAAAAAAgBjwAAAAAAAA8MXsFSxKKeP63Ht/9PfpXc8DAOgn+omcyImcyAkAoJ8gJ8c5jw0eAAAAAACAuKINAAAAAACAuKINYiUwVkdlRmbkRE4AAJ1EJ5EZmZETOQFIYoMHAAAAAAAgBjwAAAAAAADEgAcAAAAAAIAY8AAAAAAAAMSABwAAAAAAgBjwAAAAAAAAEAMeAAAAAACAGPAAAAAAAADwZ2avYNF7n450nlLK7bm1NvlCAKCf6CfICXICAOgn+omcyEls8AAAAAAAAMQVbQAAAAAAAGzPqtkOPkoZ1+fLaqVrzRogP1FrHTKDzCAn/Iax+u7nB/8jD8gJfu+gkyAzyAl6LHISGzwAAAAAAADEgAcAAAAAACCuaAPiagtkhlg3BgDQXZEZ/N4BiA0eAAAAAAAAYsADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDdJxTCxBi8pilPAAAAAElFTkSuQmCC",
+    "boina": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAAClElEQVR42u3cra3CABSG4a8EhcZgMF2igiEYpyN0HIaoYImaGgy6tigQJAjCT9r0edRV3KR9xUmacxIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHhWeAT/V2/K8f53M3TeAQBgPkEn6AQAwHyCTt6y8toAAAAAAADmxQceAAAAAACAONG2aOf9YfzG71R9693ESmCsjqIZdIL5BJ2gE8wkoBl0gvkEncQGDwAAAAAAQJxoAwAAAAAAIE60ZTkrXbEqqB89oBl0gvkEnaATnehHD5rRDDrBfIJOYoMHAAAAAAAgTrQBAAAAAAAwGWuPADLblcBXv291VDOa0YlOAAAzCZrRjE50AsQGDwAAAAAAAPGBBwAAAAAAgDjR9mv1pnyscJ6ul7/93+N25+EDAOYTdIJOAADzifkEncQGDwAAAAAAQJxoAwAAAAAAIE60kaTq28JTiJXAWB3VjGZ0ohPMJ+gEnWAmQTOa0YlOMJ+gk9jgAQAAAAAAiBNtAAAAAAAAxIm26WiGzmoesRKIZtAJ5hN0gk7ATIJm0AnmE3QSGzwAAAAAAADEBx4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgA/cAKcX+UJq42K9AAAAAElFTkSuQmCC",
+    "gorro_noche": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACn0lEQVR42u3csW0CURRFwfOQi3EJlEGplEEJ7uY7ICCBACQkdpmJLIfrEzzJun9is9Za697vZ2Z8HXSCZtAJ2kAn6ASdgGbQCdpgv50cfG4AAAAAAIBt8Q8eAAAAAACAjfnxCT7H7+myfAUAwH2CTtAJAID7BJ1kwQMAAAAAAJAn2gAAAAAAAMgTbd9krfXypGtm5vazb5lJ4FPNoBnNoBPcJ+gEneAmQTPoRCfuE/cJ++jEggcAAAAAACBPtAEAAAAAAPBGRmV9zvzzkb/z0d8pk0BTYjSDTnCfoBN0gpvETaIZzaAT3CfoJAseAAAAAACAPNEGAAAAAABAnmhr5/NPs1BMR9EMOsF9gk7QCW4SNwmaQSe4T9BJFjwAAAAAAAB5og0AAAAAAIA80dYXzz8zEc0k0HQUzaAT3CfoBJ3gJnGTaEYz6AT3CTrJggcAAAAAACBPtAEAAAAAAJAn2jIFNR3NJDDTUTSDTnCfoBN0ohM3iZtEM5pBJ7hP0EkWPAAAAAAAAHmiDQAAAAAAgDzRBpkEmo6iGXQCALhJ3CSa0Qw6AciCBwAAAAAAIP/gAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgKt/wIY7VjW0i4kAAAAASUVORK5CYII=",
+    "dormido": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAAB90lEQVR42u3csQ2AMAwEwA/LeiZPaxagAqUA7kokmuSLlyI7AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgF2WI7inu+fqe1Wtnf8CAOgnyAlyAgDoJ/oJcnK4cgAAAAAAgHfxwAMAAAAAABAr2v5iHpzpuI8YCYzRUWQGOUE/QU6QE3QSnURmZAY5QT9BTmKCBwAAAAAAIFa0AQAAAAAAECvaIEYCjY4iM8gJAKCT6CQyIzPICUBM8AAAAAAAAMQDDwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwBed43J4EJzggvEAAAAASUVORK5CYII=",
+    "cansado": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACKElEQVR42u3cMQ6EIBRF0YebpWMxdKyWaaeYQqMmOpxTa6O3+An5JAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAXKz4BPu11uaR53vv5Yp3AQDMJ+gEnQAA5hPzCTr5tvn9AAAAAAAA7+KABwAAAAAAIK5oW8IY4+fqVq213PkusRJodVQzmtGJTjCfoBN0gpkEzWhGJzoxn5hPWL4TGzwAAAAAAABxRRsAAAAAAABxRdsTzRPfdPofsRIYq6NoBp1gPkEn6AQziZlEM5pBJ5hP0Els8AAAAAAAAMQVbQAAAAAAAMQVbRArgVZH0Qw6AQDMJGYSzWgGnQDEBg8AAAAAAEAc8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPyjD/+G2BVTcW95AAAAAElFTkSuQmCC",
+    "zzz": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACKklEQVR42u3cMQ6AMAwEwTP//7NpU5ICRJKZngZtZ10qg+7uTKiqCsfRCTpBJ6zSicZ0ohN0gk7YqRON6UQnOtGJTnTC6PILAAAAAAAA4sADAAAAAADAe2p2AmZmhU7QCTph9U40phOdoBN0wk6daEwnOtGJTnSik1jwAAAAAAAAEAceAAAAAAAA8s0TbWZWxBwPnaATzM/RCTrRiU50gudx0Ak6QSc6iQUPAAAAAAAAceABAAAAAADIwU+0jTOrRx+bYuX0GaBO0Ak64c+daEwnOkEn6ISdOtGYTnSiE53oRCfEggcAAAAAACAOPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAnOkGpXiAJECBg5AAAAAASUVORK5CYII=",
+    "rayo": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACH0lEQVR42u3csQ2AMBAEwQVRBf3XRhumARIgwWimBOuCt173BQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABPLJ4AAADmNY7G5aC/m/UBAAD/nT9bPQEAAAAAAEAWPAAAAAAAAOREGwCkYoycyAmyAQCYVZATZINKgwcAAAAAACALHgAAAAAAAHKiDQBSMUZOvI5s3Br0ZQYAMMciJ/jvpMEDAAAAAABAFjwAAAAAAADkRBsApGKMnOC0BQCAORY5wX8nDR4AAAAAAACy4AEAAAAAACAn2gAgFWPkBNkAADCrICfIRho8AAAAAAAAZMEDAAAAAADAS5snAIBUjJETpiIbAIA5FjnBfwcNHgAAAAAAgCx4AAAAAAAAyIk2AEjFGDlBNgAAzCrICbJBGjwAAAAAAABZ8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHzcCfo3Wwp0OeSMAAAAAElFTkSuQmCC",
+    "sudor": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACbElEQVR42u3cMQ6CQBRF0QtxKa6OBbE69gIFsSTRggTknMra/NE/mbxXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/GDwFezmZV0/n6f34HsBAADcdwAAgMsafQUAAAAAAAB54AEAAAAAAOA8r9QUAACqfjAb4L4DANhpMRskwQMAAAAAAEAeeAAAAAAAAKgeXtEGiWECqPrBbGCnApxNwG+gnRazwQ13KgkeAAAAAACAVLQBAAAAAACQirZT3D1yLj4vholzCgB2Ktx3cDZxTgHgmTuVBA8AAAAAAEAq2gAAAAAAAEhFG4nPg3OKaotU/ZgNswHYowDnFDutndZsmA2oJHgAAAAAAADywAMAAAAAAEAq2iAxzP487gqptgCzgWoLwNl03wE7LWYD3HeS4AEAAAAAAEhFGwAAAAAAAKloI9UWJO7qnIq+AuC/Huwe+A10Tt13APBfnwQPAAAAAABAHngAAAAAAABIRRsAib6m2gLMBgCA+46dFrMBJMEDAAAAAACQBx4AAAAAAAAuRCQOgMPKAtFpAADAfQcAkuABAAAAAAAgDzwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwDc2gSrE456VVEwAAAAASUVORK5CYII="
+]
+
+private let apps: [String: Set<String>] = [
+    "terminal": ["com.apple.Terminal", "com.googlecode.iterm2", "dev.warp.Warp-Stable", "com.mitchellh.ghostty",
+                 "net.kovidgoyal.kitty", "io.alacritty", "com.microsoft.VSCode", "com.apple.dt.Xcode",
+                 "com.todesktop.230313mzl4w4u92", "dev.zed.Zed", "com.sublimetext.4", "com.jetbrains.pycharm",
+                 "com.anthropic.claudefordesktop"],
+    "diseno": ["com.figma.Desktop", "com.bohemiancoding.sketch3", "com.adobe.Photoshop", "com.adobe.illustrator",
+               "com.pixelmatorteam.pixelmator.x", "com.seriflabs.affinitydesigner2", "com.seriflabs.affinityphoto2"],
+]
+
+class NyanCat: NSObject, BTTPluginInterface {
+    weak var delegate: (any BTTTouchBarPluginDelegate)?
+
+    private var tiras: [String: [CGImage]] = [:]
+    private var capas: [String: CALayer] = [:]
+    private var activas: [String] = ["base"]
+    private var cuadro = 0
+    private var tick = 0
+    private var rapido = false
+    private var timer: Timer?
+    private var cpuPrevio: (uso: UInt64, total: UInt64)?
+    private var cpuAltaSeg = 0
+
+    private lazy var viewController: NSViewController = {
+        let vc = NSViewController()
+        let v = NSView(frame: NSRect(x: 0, y: 0, width: 69, height: 30))
+        v.wantsLayer = true
+        v.translatesAutoresizingMaskIntoConstraints = false
+        v.widthAnchor.constraint(equalToConstant: 69).isActive = true
+        v.heightAnchor.constraint(equalToConstant: 30).isActive = true
+        vc.view = v
+        for (nombre, b64) in sprites.sorted(by: { $0.key < $1.key }) {
+            guard let data = Data(base64Encoded: b64), let src = CGImageSourceCreateWithData(data as CFData, nil),
+                  let tira = CGImageSourceCreateImageAtIndex(src, 0, nil) else { continue }
+            let w = tira.width / 12
+            tiras[nombre] = (0..<12).compactMap { tira.cropping(to: CGRect(x: $0 * w, y: 0, width: w, height: tira.height)) }
+            let capa = CALayer()
+            capa.frame = v.bounds
+            capa.contentsGravity = .resize
+            capa.magnificationFilter = .nearest
+            capa.isHidden = true
+            capa.zPosition = nombre.hasPrefix("base") ? 0 : 1
+            v.layer?.addSublayer(capa)
+            capas[nombre] = capa
+        }
+        actualizarEstado()
+        arrancar()
+        return vc
+    }()
+
+    deinit { timer?.invalidate() }
+
+    static func configurationFormItems() -> BTTPluginFormItem? { nil }
+
+    func didReceiveNewConfigurationValues(_ configurationValues: [AnyHashable: Any]) {}
+
+    func touchBarViewController() -> NSViewController? { viewController }
+
+    private func arrancar() {
+        timer?.invalidate()
+        timer = Timer(timeInterval: rapido ? 0.045 : 0.09, repeats: true) { [weak self] _ in self?.avanzar() }
+        RunLoop.main.add(timer!, forMode: .common)
+    }
+
+    private func avanzar() {
+        cuadro = (cuadro + 1) % 12
+        tick += 1
+        if tick % 11 == 0 { actualizarEstado() }  // ~1 s
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        for (nombre, capa) in capas {
+            let on = activas.contains(nombre)
+            capa.isHidden = !on
+            if on, let fr = tiras[nombre] { capa.contents = fr[cuadro] }
+        }
+        CATransaction.commit()
+    }
+
+    // MARK: - Estado
+
+    private func actualizarEstado() {
+        var e = Set<String>()
+        let forzado = (delegate?.getVariable("nyan_forzar") as? String ?? "").trimmingCharacters(in: .whitespaces)
+        if !forzado.isEmpty {
+            e = Set(forzado.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
+        } else {
+            if let v = delegate?.getVariable("BTTCurrentlyPlaying"), "\(v)" == "1" || "\(v)" == "1.0" { e.insert("musica") }
+            let app = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+            for (cat, ids) in apps where ids.contains(app) { e.insert(cat) }
+            if microfonoEnUso() { e.insert("microfono") }
+            let (pct, cargando) = bateria()
+            if cargando { e.insert("cargando") } else if let pct, pct <= 20 { e.insert("bateria_baja") }
+            if Calendar.current.component(.hour, from: Date()) < 6 { e.insert("noche") }
+            if cpuAlta() { e.insert("cpu") }
+        }
+        activas = capasPara(e)
+        if e.contains("cpu") != rapido { rapido = e.contains("cpu"); arrancar() }
+    }
+
+    /// Reglas de combinación: una base, un sombrero, unos ojos y los extras que no chocan.
+    private func capasPara(_ e: Set<String>) -> [String] {
+        var c = [e.contains("terminal") ? "base_matrix" : e.contains("bateria_baja") ? "base_destenida" : "base"]
+        if e.contains("microfono") { c.append("audifonos") }
+        else if e.contains("diseno") { c.append("boina") }
+        else if e.contains("noche") { c.append("gorro_noche") }
+        if e.contains("terminal") { c.append("lentes_hacker") }
+        else if e.contains("noche") { c.append("dormido") }
+        else if e.contains("bateria_baja") { c.append("cansado") }
+        if e.contains("noche") { c.append("zzz") }
+        if e.contains("musica") { c.append("notas") }
+        if e.contains("cargando") { c.append("rayo") }
+        if e.contains("cpu") { c.append("sudor") }
+        return c
+    }
+
+    private func microfonoEnUso() -> Bool {
+        var dev = AudioDeviceID(0)
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        var dir = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultInputDevice,
+                                             mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &dir, 0, nil, &size, &dev) == noErr, dev != 0 else { return false }
+        var corriendo = UInt32(0)
+        size = UInt32(MemoryLayout<UInt32>.size)
+        dir.mSelector = kAudioDevicePropertyDeviceIsRunningSomewhere
+        guard AudioObjectGetPropertyData(dev, &dir, 0, nil, &size, &corriendo) == noErr else { return false }
+        return corriendo != 0
+    }
+
+    private func bateria() -> (Int?, Bool) {
+        guard let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+              let lista = IOPSCopyPowerSourcesList(info)?.takeRetainedValue() as? [CFTypeRef] else { return (nil, false) }
+        for ps in lista {
+            guard let d = IOPSGetPowerSourceDescription(info, ps)?.takeUnretainedValue() as? [String: Any],
+                  d[kIOPSTypeKey] as? String == kIOPSInternalBatteryType else { continue }
+            let cur = d[kIOPSCurrentCapacityKey] as? Int ?? 0, max = d[kIOPSMaxCapacityKey] as? Int ?? 100
+            return (max > 0 ? cur * 100 / max : nil, d[kIOPSIsChargingKey] as? Bool ?? false)
+        }
+        return (nil, false)
+    }
+
+    /// CPU total sobre 70 % durante 3 s seguidos.
+    private func cpuAlta() -> Bool {
+        var info = host_cpu_load_info()
+        var n = mach_msg_type_number_t(MemoryLayout<host_cpu_load_info>.size / MemoryLayout<integer_t>.size)
+        let r = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(n)) { host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, $0, &n) }
+        }
+        guard r == KERN_SUCCESS else { return false }
+        let t = info.cpu_ticks
+        let uso = UInt64(t.0) + UInt64(t.1) + UInt64(t.3), total = uso + UInt64(t.2)
+        defer { cpuPrevio = (uso, total) }
+        guard let p = cpuPrevio, total > p.total else { return false }
+        let pct = Double(uso - p.uso) / Double(total - p.total)
+        cpuAltaSeg = pct > 0.7 ? cpuAltaSeg + 1 : 0
+        return cpuAltaSeg >= 3
+    }
+}

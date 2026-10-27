@@ -1,0 +1,171 @@
+// BTT-Plugin-Name: Nyan Cat
+// BTT-Plugin-Identifier: net.nllsn.nyancat
+// BTT-Plugin-Type: TouchBar
+// BTT-Plugin-Icon: sparkles
+//
+// Nyan Cat animado para la Touch Bar, con accesorios según lo que estés haciendo.
+// ARCHIVO GENERADO por generar.py (editar NyanCat.swift.in, no este).
+import Cocoa
+import CoreAudio
+import IOKit.ps
+
+// Tiras de 12 cuadros (138x60 px c/u), PNG en base64.
+private let sprites: [String: String] = [
+/*SPRITES*/
+]
+
+private let apps: [String: Set<String>] = [
+    "terminal": ["com.apple.Terminal", "com.googlecode.iterm2", "dev.warp.Warp-Stable", "com.mitchellh.ghostty",
+                 "net.kovidgoyal.kitty", "io.alacritty", "com.microsoft.VSCode", "com.apple.dt.Xcode",
+                 "com.todesktop.230313mzl4w4u92", "dev.zed.Zed", "com.sublimetext.4", "com.jetbrains.pycharm",
+                 "com.anthropic.claudefordesktop"],
+    "diseno": ["com.figma.Desktop", "com.bohemiancoding.sketch3", "com.adobe.Photoshop", "com.adobe.illustrator",
+               "com.pixelmatorteam.pixelmator.x", "com.seriflabs.affinitydesigner2", "com.seriflabs.affinityphoto2"],
+]
+
+class NyanCat: NSObject, BTTPluginInterface {
+    weak var delegate: (any BTTTouchBarPluginDelegate)?
+
+    private var tiras: [String: [CGImage]] = [:]
+    private var capas: [String: CALayer] = [:]
+    private var activas: [String] = ["base"]
+    private var cuadro = 0
+    private var tick = 0
+    private var rapido = false
+    private var timer: Timer?
+    private var cpuPrevio: (uso: UInt64, total: UInt64)?
+    private var cpuAltaSeg = 0
+
+    private lazy var viewController: NSViewController = {
+        let vc = NSViewController()
+        let v = NSView(frame: NSRect(x: 0, y: 0, width: 69, height: 30))
+        v.wantsLayer = true
+        v.translatesAutoresizingMaskIntoConstraints = false
+        v.widthAnchor.constraint(equalToConstant: 69).isActive = true
+        v.heightAnchor.constraint(equalToConstant: 30).isActive = true
+        vc.view = v
+        for (nombre, b64) in sprites.sorted(by: { $0.key < $1.key }) {
+            guard let data = Data(base64Encoded: b64), let src = CGImageSourceCreateWithData(data as CFData, nil),
+                  let tira = CGImageSourceCreateImageAtIndex(src, 0, nil) else { continue }
+            let w = tira.width / 12
+            tiras[nombre] = (0..<12).compactMap { tira.cropping(to: CGRect(x: $0 * w, y: 0, width: w, height: tira.height)) }
+            let capa = CALayer()
+            capa.frame = v.bounds
+            capa.contentsGravity = .resize
+            capa.magnificationFilter = .nearest
+            capa.isHidden = true
+            capa.zPosition = nombre.hasPrefix("base") ? 0 : 1
+            v.layer?.addSublayer(capa)
+            capas[nombre] = capa
+        }
+        actualizarEstado()
+        arrancar()
+        return vc
+    }()
+
+    deinit { timer?.invalidate() }
+
+    static func configurationFormItems() -> BTTPluginFormItem? { nil }
+
+    func didReceiveNewConfigurationValues(_ configurationValues: [AnyHashable: Any]) {}
+
+    func touchBarViewController() -> NSViewController? { viewController }
+
+    private func arrancar() {
+        timer?.invalidate()
+        timer = Timer(timeInterval: rapido ? 0.045 : 0.09, repeats: true) { [weak self] _ in self?.avanzar() }
+        RunLoop.main.add(timer!, forMode: .common)
+    }
+
+    private func avanzar() {
+        cuadro = (cuadro + 1) % 12
+        tick += 1
+        if tick % 11 == 0 { actualizarEstado() }  // ~1 s
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        for (nombre, capa) in capas {
+            let on = activas.contains(nombre)
+            capa.isHidden = !on
+            if on, let fr = tiras[nombre] { capa.contents = fr[cuadro] }
+        }
+        CATransaction.commit()
+    }
+
+    // MARK: - Estado
+
+    private func actualizarEstado() {
+        var e = Set<String>()
+        let forzado = (delegate?.getVariable("nyan_forzar") as? String ?? "").trimmingCharacters(in: .whitespaces)
+        if !forzado.isEmpty {
+            e = Set(forzado.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
+        } else {
+            if let v = delegate?.getVariable("BTTCurrentlyPlaying"), "\(v)" == "1" || "\(v)" == "1.0" { e.insert("musica") }
+            let app = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+            for (cat, ids) in apps where ids.contains(app) { e.insert(cat) }
+            if microfonoEnUso() { e.insert("microfono") }
+            let (pct, cargando) = bateria()
+            if cargando { e.insert("cargando") } else if let pct, pct <= 20 { e.insert("bateria_baja") }
+            if Calendar.current.component(.hour, from: Date()) < 6 { e.insert("noche") }
+            if cpuAlta() { e.insert("cpu") }
+        }
+        activas = capasPara(e)
+        if e.contains("cpu") != rapido { rapido = e.contains("cpu"); arrancar() }
+    }
+
+    /// Reglas de combinación: una base, un sombrero, unos ojos y los extras que no chocan.
+    private func capasPara(_ e: Set<String>) -> [String] {
+        var c = [e.contains("terminal") ? "base_matrix" : e.contains("bateria_baja") ? "base_destenida" : "base"]
+        if e.contains("microfono") { c.append("audifonos") }
+        else if e.contains("diseno") { c.append("boina") }
+        else if e.contains("noche") { c.append("gorro_noche") }
+        if e.contains("terminal") { c.append("lentes_hacker") }
+        else if e.contains("noche") { c.append("dormido") }
+        else if e.contains("bateria_baja") { c.append("cansado") }
+        if e.contains("noche") { c.append("zzz") }
+        if e.contains("musica") { c.append("notas") }
+        if e.contains("cargando") { c.append("rayo") }
+        if e.contains("cpu") { c.append("sudor") }
+        return c
+    }
+
+    private func microfonoEnUso() -> Bool {
+        var dev = AudioDeviceID(0)
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        var dir = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultInputDevice,
+                                             mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &dir, 0, nil, &size, &dev) == noErr, dev != 0 else { return false }
+        var corriendo = UInt32(0)
+        size = UInt32(MemoryLayout<UInt32>.size)
+        dir.mSelector = kAudioDevicePropertyDeviceIsRunningSomewhere
+        guard AudioObjectGetPropertyData(dev, &dir, 0, nil, &size, &corriendo) == noErr else { return false }
+        return corriendo != 0
+    }
+
+    private func bateria() -> (Int?, Bool) {
+        guard let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+              let lista = IOPSCopyPowerSourcesList(info)?.takeRetainedValue() as? [CFTypeRef] else { return (nil, false) }
+        for ps in lista {
+            guard let d = IOPSGetPowerSourceDescription(info, ps)?.takeUnretainedValue() as? [String: Any],
+                  d[kIOPSTypeKey] as? String == kIOPSInternalBatteryType else { continue }
+            let cur = d[kIOPSCurrentCapacityKey] as? Int ?? 0, max = d[kIOPSMaxCapacityKey] as? Int ?? 100
+            return (max > 0 ? cur * 100 / max : nil, d[kIOPSIsChargingKey] as? Bool ?? false)
+        }
+        return (nil, false)
+    }
+
+    /// CPU total sobre 70 % durante 3 s seguidos.
+    private func cpuAlta() -> Bool {
+        var info = host_cpu_load_info()
+        var n = mach_msg_type_number_t(MemoryLayout<host_cpu_load_info>.size / MemoryLayout<integer_t>.size)
+        let r = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(n)) { host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, $0, &n) }
+        }
+        guard r == KERN_SUCCESS else { return false }
+        let t = info.cpu_ticks
+        let uso = UInt64(t.0) + UInt64(t.1) + UInt64(t.3), total = uso + UInt64(t.2)
+        defer { cpuPrevio = (uso, total) }
+        guard let p = cpuPrevio, total > p.total else { return false }
+        let pct = Double(uso - p.uso) / Double(total - p.total)
+        cpuAltaSeg = pct > 0.7 ? cpuAltaSeg + 1 : 0
+        return cpuAltaSeg >= 3
+    }
+}
