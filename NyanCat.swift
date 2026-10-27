@@ -1,5 +1,5 @@
 // BTT-Plugin-Name: Nyan Cat
-// BTT-Plugin-Identifier: net.nllsn.nyancat
+// BTT-Plugin-Identifier: io.github.lahoal.nyancat
 // BTT-Plugin-Type: TouchBar
 // BTT-Plugin-Icon: sparkles
 //

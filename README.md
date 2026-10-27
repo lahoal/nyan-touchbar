@@ -1,59 +1,74 @@
-# Nyan Cat para la Touch Bar
+# Nyan Cat for the Touch Bar
 
-Un Nyan Cat animado para la Touch Bar de la MacBook Pro, hecho como plugin de [BetterTouchTool](https://folivora.ai). Cambia de accesorios según lo que estés haciendo.
+*[Leer en español](README.es.md)*
 
-![todas las variantes](vistas/todas.png)
+An animated Nyan Cat for the MacBook Pro Touch Bar, built as a [BetterTouchTool](https://folivora.ai) plugin. It puts on different accessories depending on what you're doing.
 
-| Estado | Qué cambia | Cómo se detecta |
+![Nyan Cat cycling through its variants on a real Touch Bar](previews/touchbar-real.gif)
+
+*Recorded on a real Touch Bar. The full bar looks like this (the calendar event name was replaced for privacy):*
+
+![Full Touch Bar with the cat on the left](previews/touchbar-real.png)
+
+## Variants
+
+| | State | How it's detected |
 |---|---|---|
-| Música sonando | Notas musicales flotando | Variable de BTT `BTTCurrentlyPlaying` |
-| Terminal o editor al frente | Arcoíris matrix y lentes de hacker | App al frente (Terminal, iTerm2, Warp, Ghostty, kitty, Alacritty, VS Code, Cursor, Xcode, Zed, Sublime, PyCharm, Claude) |
-| App de diseño al frente | Boina de pintor | Figma, Sketch, Photoshop, Illustrator, Pixelmator Pro, Affinity |
-| Micrófono en uso | Audífonos con micrófono | Entrada de audio predeterminada en uso por cualquier app (CoreAudio) |
-| Batería ≤ 20 % | Arcoíris desteñido, ojos cansados | IOKit |
-| Cargando | Rayo en la tostada | IOKit |
-| Entre las 0:00 y las 6:00 | Gorro de dormir, ojos cerrados, zzz | Reloj |
-| CPU > 70 % por 3 s | Gotas de sudor y animación al doble de velocidad | `host_statistics` |
+| ![](previews/music.gif) | **Music playing**: floating notes | BTT variable `BTTCurrentlyPlaying` |
+| ![](previews/terminal.gif) | **Terminal or code editor in front**: matrix rainbow and hacker shades | Frontmost app: Terminal, iTerm2, Warp, Ghostty, kitty, Alacritty, VS Code, Cursor, Xcode, Zed, Sublime Text, PyCharm, Claude |
+| ![](previews/design.gif) | **Design app in front**: painter's beret | Figma, Sketch, Photoshop, Illustrator, Pixelmator Pro, Affinity |
+| ![](previews/microphone.gif) | **Microphone in use**: headset | Default input device running in any app (CoreAudio), so browser calls count too |
+| ![](previews/low-battery.gif) | **Battery ≤ 20 %**: faded rainbow, tired eyes | IOKit power sources |
+| ![](previews/charging.gif) | **Charging**: lightning bolt on the pop-tart | IOKit power sources |
+| ![](previews/late-night.gif) | **Midnight to 6 AM**: nightcap, closed eyes, zzz | Clock |
+| ![](previews/high-cpu.gif) | **CPU above 70 % for 3 s**: sweat drops, double-speed animation | `host_statistics` |
 
-Los accesorios se combinan: con música y la terminal al frente, el gato sale con lentes de hacker **y** notas. Cuando dos accesorios ocupan el mismo lugar, gana uno con una prioridad fija: en la cabeza, audífonos > boina > gorro; en los ojos, lentes > dormido > cansado.
+Accessories stack: music with a terminal in front gives you hacker shades **and** notes.
 
-## Instalación
+![](previews/terminal-music.gif)
 
-Requisitos: BetterTouchTool 6.7 o más nuevo y las Command Line Developer Tools (`xcode-select --install`).
+When two accessories want the same spot, a fixed priority decides. On the head, the order is headset > beret > nightcap. On the eyes, it is shades > closed > tired.
 
-1. Copia `NyanCat.swift` en `~/Library/Application Support/BetterTouchTool/Plugins/`. BTT lo compila solo y pide confirmación.
-2. En BTT → Touch Bar, agrega un widget **Plugin** y elige **Nyan Cat**. Déjalo arriba de todo, con ubicación a la izquierda.
-3. Si tu preset tiene grupos condicionales (por ejemplo uno de "Music Playing"), agrega el widget también en esos grupos.
-4. Si ya existía una versión anterior del plugin, reinicia BTT para que cargue la nueva.
+## Install
 
-## Probar las variantes
+You need BetterTouchTool with Swift plugin support and the Command Line Developer Tools (`xcode-select --install`). Tested on BTT 6.784 and 6.958, macOS 15.7, MacBook Pro M1 (2020).
 
-Puedes forzar estados con una variable de BTT (separados por coma). Para volver a la detección automática, déjala vacía:
+1. Download `NyanCat.swift` from the [latest release](../../releases/latest), or grab it from this repo.
+2. Copy it to `~/Library/Application Support/BetterTouchTool/Plugins/`. BTT compiles it on its own and asks you to confirm.
+3. In BTT → Touch Bar, add a **Plugin** widget and pick **Nyan Cat**. Put it at the top of the list and set its placement to the left.
+4. If your preset uses conditional activation groups (for example a "Music Playing" group), add the widget to those groups too.
+5. When you update the plugin, restart BTT. Hot reload does not replace widgets that already exist.
+
+## Try the variants
+
+Force one or more states with a BTT variable (comma-separated):
 
 ```bash
 osascript -e 'tell application "BetterTouchTool" to set_string_variable "nyan_forzar" to "musica,terminal"'
 ```
 
+Set it back to empty to return to automatic detection:
+
 ```bash
 osascript -e 'tell application "BetterTouchTool" to set_string_variable "nyan_forzar" to ""'
 ```
 
-Estados: `musica`, `terminal`, `diseno`, `microfono`, `bateria_baja`, `cargando`, `noche`, `cpu`.
+State names (in Spanish, as in the code): `musica`, `terminal`, `diseno`, `microfono`, `bateria_baja`, `cargando`, `noche`, `cpu`. Any other value (`normal`, for example) shows the plain cat.
 
-## Modificar
+## Hacking on it
 
-Los sprites se dibujan con código en `generar.py` (Python 3 + Pillow): grilla de 46×20 px, escala 3 y 12 cuadros por capa. El script embebe las tiras PNG en `NyanCat.swift` a partir de la plantilla `NyanCat.swift.in`. Edita la plantilla o el generador, nunca `NyanCat.swift` directamente:
+The sprites are drawn in code by `generar.py` (Python 3 + Pillow). Each sprite sits on a 46×20 px grid, scaled ×3, with 12 frames per layer. The script embeds the PNG strips into `NyanCat.swift`, using `NyanCat.swift.in` as the template. Edit the template or the generator, never `NyanCat.swift` itself:
 
 ```bash
 python3 generar.py
 ```
 
-Las listas de apps y las reglas de combinación están en `NyanCat.swift.in` (`apps` y `capasPara`).
+The app lists and the stacking rules live in `NyanCat.swift.in` (`apps` and `capasPara`). The comments in the code are in Spanish.
 
-## Consumo
+## Performance
 
-Un timer de 90 ms cambia el contenido de capas ya decodificadas, y el estado se revisa una vez por segundo. En una MacBook Pro con M1, BetterTouchTool quedó en torno a 1–2 % de CPU con el gato animado.
+A 90 ms timer swaps pre-decoded frames on Core Animation layers, and the state is re-checked once per second. With the cat running, BetterTouchTool sat at about 1–2 % CPU on an M1 MacBook Pro.
 
-## Créditos
+## Credits
 
-Nyan Cat es un personaje creado por Chris Torres (2011). Esto es un homenaje de fans, sin fines comerciales; los sprites son pixel art propio. El código se publica bajo licencia MIT.
+Nyan Cat is a character created by Chris Torres (2011). This is a non-commercial fan tribute with original pixel art. The code is released under the MIT license.

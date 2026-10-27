@@ -2,10 +2,10 @@
 
 Grilla de 46x20 px, escala 3 -> 138x60 px (69x30 pt en la Touch Bar).
 Cada capa es una tira de 12 cuadros. Las bases son opacas; los accesorios, transparentes.
-Uso: python3 generar.py   (escribe NyanCat.swift, sprites/ y vistas/)
+Uso: python3 generar.py   (escribe NyanCat.swift, previews/)
 """
 import base64, io, os
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 W, H, S, N = 46, 20, 3, 12
 NAVY, BLK, WHT, YEL = (0, 51, 102), (0, 0, 0), (255, 255, 255), (255, 230, 0)
@@ -195,12 +195,12 @@ def compuesto(nombres, i):
     return im.resize((W * S, H * S), Image.NEAREST)
 
 
-VISTAS = {  # lo que el plugin muestra en cada estado (ver NyanCat.swift)
-    "normal": ["base"], "musica": ["base", "notas"], "terminal": ["base_matrix", "lentes_hacker"],
-    "diseno": ["base", "boina"], "microfono": ["base", "audifonos"],
-    "bateria-baja": ["base_destenida", "cansado"], "cargando": ["base", "rayo"],
-    "noche": ["base", "gorro_noche", "dormido", "zzz"], "cpu-alta": ["base", "sudor"],
-    "combo-musica-terminal": ["base_matrix", "lentes_hacker", "notas"],
+VISTAS = {  # lo que el plugin muestra en cada estado (ver NyanCat.swift.in, capasPara)
+    "normal": ["base"], "music": ["base", "notas"], "terminal": ["base_matrix", "lentes_hacker"],
+    "design": ["base", "boina"], "microphone": ["base", "audifonos"],
+    "low-battery": ["base_destenida", "cansado"], "charging": ["base", "rayo"],
+    "late-night": ["base", "gorro_noche", "dormido", "zzz"], "high-cpu": ["base", "sudor"],
+    "terminal-music": ["base_matrix", "lentes_hacker", "notas"],
 }
 
 if __name__ == "__main__":
@@ -208,14 +208,16 @@ if __name__ == "__main__":
     for n, t in tiras.items():
         assert t.size == (W * S * N, H * S), n
     # vistas para el README: GIF por estado y una lámina con todos
-    lam = Image.new("RGBA", (W * S * 2 + 30, (H * S + 30) * ((len(VISTAS) + 1) // 2)), (24, 24, 24, 255))
+    A, B = W * S * 2, H * S * 2  # vistas al doble, para que se lean en GitHub
+    lam = Image.new("RGBA", (A * 2 + 40, (B + 44) * ((len(VISTAS) + 1) // 2)), (24, 24, 24, 255))
+    fuente = ImageFont.truetype("/System/Library/Fonts/SFNS.ttf", 22) if os.path.exists("/System/Library/Fonts/SFNS.ttf") else None
     d = ImageDraw.Draw(lam)
     for k, (nombre, capas) in enumerate(VISTAS.items()):
-        fr = [compuesto(capas, i).convert("RGB") for i in range(N)]
-        fr[0].save(os.path.join(HERE, "vistas", nombre + ".gif"), save_all=True, append_images=fr[1:], duration=90, loop=0)
-        x, y = (k % 2) * (W * S + 30), (k // 2) * (H * S + 30)
-        lam.paste(fr[3], (x, y)); d.text((x, y + H * S + 4), nombre, fill=(230, 230, 230))
-    lam.save(os.path.join(HERE, "vistas", "todas.png"))
+        fr = [compuesto(capas, i).convert("RGB").resize((W * S * 2, H * S * 2), Image.NEAREST) for i in range(N)]
+        fr[0].save(os.path.join(HERE, "previews", nombre + ".gif"), save_all=True, append_images=fr[1:], duration=90, loop=0)
+        x, y = (k % 2) * (A + 40), (k // 2) * (B + 44)
+        lam.paste(fr[3], (x, y)); d.text((x, y + B + 8), nombre, fill=(230, 230, 230), font=fuente)
+    lam.save(os.path.join(HERE, "previews", "all-variants.png"))
     # NyanCat.swift = plantilla + sprites embebidos
     datos = ",\n".join(f'    "{n}": "{base64.b64encode(png(t)).decode()}"' for n, t in tiras.items())
     plantilla = open(os.path.join(HERE, "NyanCat.swift.in")).read()
