@@ -46,9 +46,24 @@ When two accessories want the same spot, a fixed priority decides (the `zonas` t
 - In front of the face: gamepad > popcorn > coffee
 - Top left: zzz > speech bubble
 
+## Media button
+
+To the right of the cat there's one wide button that's part of the same scene: its sky, stars and button colors change along with the cat (blue and yellow normally, matrix green with a terminal in front, faded on low battery).
+
+![](previews/media.gif)
+
+- **Tap:** play/pause. The button presses in and flips its icon right away, instead of waiting the second BTT takes to notice.
+- **Swipe right:** next track. The ⏭ icon shoots off with a rainbow trail and the cat runs at double speed.
+- **Swipe left:** previous track. The ⏮ icon shoots the other way and the cat rewinds.
+- With no player, the button is a faint outline among the stars and tapping it counts as tapping the cat. With a player open, even paused (per `BTTCurrentlyPlayingApp`), it lights up.
+- It sends the system media keys, like F7–F9, so it controls whatever is playing: Spotify, Music, YouTube in the browser…
+- When the accessories change, a burst of pixels flies across the panel into the cat.
+
+The widget is 135 pt wide (cat 69 + panel 66, with a 60 pt button). If your preset already has its own media buttons, you'll probably want to hide them.
+
 ## Hide a mood with a triple tap
 
-Tap the cat 3 times in a row to hide the decorative moods on screen: coffee, popcorn, chat bubble and special days. They stay hidden until their next occurrence: coffee, tomorrow at 7; a special day, next year; popcorn and the bubble, the next time you open a video or chat app. The dismissal is saved in `~/Library/Application Support/NyanCat/descartados.json`, so every cat widget (BTT makes one per group) shares it, and it survives a BTT restart. Another triple tap with nothing to hide brings them back. Moods that carry information (battery, CPU, network, microphone, camera) can't be hidden.
+Tap the cat (not the panel) 3 times in a row to hide the decorative moods on screen: coffee, popcorn, chat bubble and special days. They stay hidden until their next occurrence: coffee, tomorrow at 7; a special day, next year; popcorn and the bubble, the next time you open a video or chat app. The dismissal is saved in `~/Library/Application Support/NyanCat/descartados.json`, so every cat widget (BTT makes one per group) shares it, and it survives a BTT restart. Another triple tap with nothing to hide brings them back. Moods that carry information (battery, CPU, network, microphone, camera) can't be hidden.
 
 ![](previews/dismiss.gif)
 
@@ -85,7 +100,7 @@ Set it back to empty to return to automatic detection:
 osascript -e 'tell application "BetterTouchTool" to set_string_variable "nyan_forzar" to ""'
 ```
 
-State names (in Spanish, as in the code): `musica`, `terminal`, `diseno`, `escritura`, `chat`, `juegos`, `video`, `microfono`, `videollamada`, `bateria_baja`, `cargando`, `noche`, `manana`, `inactivo`, `cpu`, `caliente`, `sin_red`, `halloween`, `navidad`, `ano_nuevo`, `fiestas_patrias`. Any other value (`normal`, for example) shows the plain cat.
+State names (in Spanish, as in the code): `musica`, `terminal`, `diseno`, `escritura`, `chat`, `juegos`, `video`, `microfono`, `videollamada`, `bateria_baja`, `cargando`, `noche`, `manana`, `inactivo`, `cpu`, `caliente`, `sin_red`, `halloween`, `navidad`, `ano_nuevo`, `fiestas_patrias`. Use `reproductor` to see the panel lit while paused. Any other value (`normal`, for example) shows the plain cat with the panel off.
 
 ## Hacking on it
 

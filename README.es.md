@@ -46,9 +46,24 @@ Cuando dos accesorios ocupan el mismo lugar, una prioridad fija decide (tabla `z
 - Frente a la cara: control > palomitas > café
 - Arriba a la izquierda: zzz > globo
 
+## Botón de media
+
+A la derecha del gato hay un botón ancho que es parte de la misma escena: el cielo, las estrellas y los colores del botón cambian junto con el gato (azul y amarillo normal, verde matrix con la terminal, desteñido con batería baja).
+
+![](previews/media.gif)
+
+- **Toque:** play/pausa. El botón se hunde y cambia de ícono al instante, sin esperar el segundo que tarda BTT.
+- **Deslizar a la derecha:** siguiente canción. El ícono ⏭ sale disparado con una estela de arcoíris y el gato corre al doble.
+- **Deslizar a la izquierda:** canción anterior. El ícono ⏮ sale hacia el otro lado y el gato rebobina.
+- Sin reproductor, el botón es una silueta tenue entre las estrellas y tocarlo cuenta como tocar al gato. Con un reproductor abierto, aunque esté en pausa (según `BTTCurrentlyPlayingApp`), se enciende.
+- Usa las teclas de media del sistema, como F7–F9, así que controla lo que esté sonando: Spotify, Música, YouTube en el navegador…
+- Cuando cambian los accesorios, una ráfaga de píxeles cruza el panel hacia el gato.
+
+El widget mide 135 pt (gato de 69 + panel de 66, con un botón de 60 pt). Si tu preset ya tiene sus propios botones de media, conviene ocultarlos.
+
 ## Ocultar un mood con triple toque
 
-Toca al gato 3 veces seguidas para ocultar los moods decorativos que estén a la vista: café, palomitas, globo de chat y fechas especiales. No vuelven hasta su próxima ocurrencia: el café, mañana a las 7; una fecha especial, el próximo año; las palomitas y el globo, la próxima vez que abras una app de video o de chat. El descarte se guarda en `~/Library/Application Support/NyanCat/descartados.json`, así que lo comparten todos los widgets del gato (uno por grupo de BTT) y sobrevive a un reinicio de BTT. Otro triple toque, sin nada que ocultar, los devuelve. Los moods que informan algo (batería, CPU, red, micrófono, cámara) no se ocultan.
+Toca al gato (no el panel) 3 veces seguidas para ocultar los moods decorativos que estén a la vista: café, palomitas, globo de chat y fechas especiales. No vuelven hasta su próxima ocurrencia: el café, mañana a las 7; una fecha especial, el próximo año; las palomitas y el globo, la próxima vez que abras una app de video o de chat. El descarte se guarda en `~/Library/Application Support/NyanCat/descartados.json`, así que lo comparten todos los widgets del gato (uno por grupo de BTT) y sobrevive a un reinicio de BTT. Otro triple toque, sin nada que ocultar, los devuelve. Los moods que informan algo (batería, CPU, red, micrófono, cámara) no se ocultan.
 
 ![](previews/dismiss.gif)
 
@@ -85,7 +100,7 @@ Para volver a la detección automática, déjala vacía:
 osascript -e 'tell application "BetterTouchTool" to set_string_variable "nyan_forzar" to ""'
 ```
 
-Estados: `musica`, `terminal`, `diseno`, `escritura`, `chat`, `juegos`, `video`, `microfono`, `videollamada`, `bateria_baja`, `cargando`, `noche`, `manana`, `inactivo`, `cpu`, `caliente`, `sin_red`, `halloween`, `navidad`, `ano_nuevo`, `fiestas_patrias`. Cualquier otro valor (por ejemplo `normal`) muestra el gato sin accesorios.
+Estados: `musica`, `terminal`, `diseno`, `escritura`, `chat`, `juegos`, `video`, `microfono`, `videollamada`, `bateria_baja`, `cargando`, `noche`, `manana`, `inactivo`, `cpu`, `caliente`, `sin_red`, `halloween`, `navidad`, `ano_nuevo`, `fiestas_patrias`. Para ver el panel encendido en pausa, usa `reproductor`. Cualquier otro valor (por ejemplo `normal`) muestra el gato sin accesorios y el panel apagado.
 
 ## Modificar
 

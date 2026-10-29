@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Media button
+
+- One wide button to the right of the cat, drawn as part of the same pixel scene. The widget grows from 69 to 135 pt (60 pt button with a margin around it).
+- Tap for play/pause, swipe right for next track, swipe left for previous. Touches are tracked directly (start position and horizontal travel), so the whole button is the target.
+- Each gesture has its own 8-frame animation: the button presses in and swaps ▶/⏸, or the ⏭/⏮ icon shoots off with a rainbow trail while the cat runs at double speed or rewinds. Play/pause flips immediately and reconciles with BTT 2.5 s later.
+- No player: a faint outline among the stars, and taps count as taps on the cat. Player open, even paused (`BTTCurrentlyPlayingApp`): the button lights up.
+- The panel follows the cat's color scheme: sky, stars, button, accent and rainbow trail switch between navy and yellow, matrix green, and faded along with the cat's base, so it never looks like a separate piece.
+- It sends the system media keys (like F7–F9), so it controls whatever macOS considers "now playing".
+- Mood changes now play a burst of rainbow pixels that crosses the panel into the cat.
+- `nyan_forzar` accepts `reproductor` to preview the lit button while paused.
+
 ## v1.1.0 — 2026-10-29
 
 ### New moods

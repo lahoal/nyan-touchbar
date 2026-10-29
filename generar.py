@@ -316,6 +316,133 @@ def destello(i):
     return im
 
 
+
+# --- Panel de media: a la derecha del gato, 44x20 px (66 pt) con un solo botón de 40x18 px (60 pt).
+# Toque = play/pausa; deslizar a la derecha = siguiente; a la izquierda = anterior.
+PW, BX, BW, BY0, BY1 = 44, 2, 40, 1, H - 2
+ICONOS = {
+    "anterior": ["X.....X.X", "X....XX.X", "X...XXXXX", "X..XXXXXX", "X...XXXXX", "X....XX.X", "X.....X.X"],
+    "play": ["..X......", "..XXX....", "..XXXXX..", "..XXXXXX.", "..XXXXX..", "..XXX....", "..X......"],
+    "pausa": ["..XX.XX..", "..XX.XX..", "..XX.XX..", "..XX.XX..", "..XX.XX..", "..XX.XX..", "..XX.XX.."],
+    "siguiente": ["X.X.....X", "X.XX....X", "XXXXX...X", "XXXXXX..X", "XXXXX...X", "X.XX....X", "X.X.....X"],
+}
+ICONO_X, ICONO_Y = BX + (BW - 9) // 2, (H - 7) // 2
+# Un esquema de color por cada base del gato: el botón cambia junto con el arcoíris.
+ESQUEMAS = {
+    "base": dict(cielo=NAVY, estrella=WHT, silueta=(35, 75, 135), marco=(90, 150, 230), fondo=(0, 40, 85),
+                 hundido=(0, 70, 140), pista=(55, 95, 160), icono=WHT, acento=YEL, estela=RAIN),
+    "matrix": dict(cielo=(0, 12, 0), estrella=(0, 200, 50), silueta=(0, 70, 20), marco=(0, 200, 50), fondo=(0, 30, 5),
+                   hundido=(0, 60, 15), pista=(0, 110, 30), icono=(0, 255, 65), acento=WHT, estela=MATRIX),
+    "destenida": dict(cielo=(20, 35, 60), estrella=(150, 150, 150), silueta=(55, 65, 85), marco=(130, 140, 160),
+                      fondo=(30, 40, 60), hundido=(50, 60, 85), pista=(85, 95, 115), icono=(210, 210, 210),
+                      acento=(230, 215, 140), estela=FADED),
+}
+
+
+def cielo(i, fondo, estrella):
+    """Fondo del panel: el mismo cielo que la base del gato, con estrellas a la misma velocidad."""
+    im = Image.new("RGBA", (PW, H), fondo + (255,))
+    d = ImageDraw.Draw(im)
+    r = lambda x0, y0, x1, y1, c: d.rectangle([x0, y0, x1, y1], fill=c)
+    k = i % 6
+    for sx, sy in [(4, 2), (21, 17), (37, 1), (12, 10), (29, 6), (42, 12)]:
+        x = (sx - k * 3) % PW
+        if k % 2:
+            r(x - 1, sy, x + 1, sy, estrella); r(x, sy - 1, x, sy + 1, estrella)
+        else:
+            r(x, sy, x, sy, estrella)
+    return im
+
+
+def capa_boton():
+    """Lienzo transparente del tamaño del panel, para capas que solo pintan el botón."""
+    im = Image.new("RGBA", (PW, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    return im, (lambda x0, y0, x1, y1, c: d.rectangle([x0, y0, x1, y1], fill=c))
+
+
+def marco(r, color, fondo, dy=0):
+    """El botón, con esquinas recortadas; dy=1 lo hunde un píxel."""
+    x0, x1, y0, y1 = BX, BX + BW - 1, BY0 + dy, BY1
+    r(x0 + 1, y0 + 1, x1 - 1, y1 - 1, fondo)
+    r(x0 + 2, y0, x1 - 2, y0, color); r(x0 + 2, y1, x1 - 2, y1, color)
+    r(x0, y0 + 2, x0, y1 - 2, color); r(x1, y0 + 2, x1, y1 - 2, color)
+    for cx, cy in ((x0 + 1, y0 + 1), (x1 - 1, y0 + 1), (x0 + 1, y1 - 1), (x1 - 1, y1 - 1)):
+        r(cx, cy, cx, cy, color)
+
+
+def pistas(r, color):
+    """‹ › tenues en los bordes: el botón se puede deslizar."""
+    px(r, BX + 3, ICONO_Y + 2, [".X", "X.", ".X"], {"X": color})
+    px(r, BX + BW - 5, ICONO_Y + 2, ["X.", ".X", "X."], {"X": color})
+
+
+def panel(c, centro=None):
+    """Capa transparente sobre el cielo. centro=None: sin reproductor, una silueta tenue. 'play' o 'pausa': botón encendido."""
+    def capa(i):
+        im, r = capa_boton()
+        if centro:
+            marco(r, c["marco"], c["fondo"])
+            pistas(r, c["pista"])
+        px(r, ICONO_X, ICONO_Y, ICONOS[centro or "play"], {"X": c["icono"] if centro else c["silueta"]})
+        return im
+    return capa
+
+
+# Las animaciones de toque y deslizar duran 8 cuadros: el plugin muestra los cuadros 4 a 11 de la tira.
+def toque(c, de, a):
+    """Toque en play/pausa: se hunde con el ícono viejo, cambia al nuevo y vuelve a su lugar."""
+    def capa(i):
+        im, r = capa_boton()
+        k = max(i, 4)
+        hundido = k < 8
+        marco(r, c["acento"] if k < 10 else c["marco"], c["hundido"] if hundido else c["fondo"], 1 if hundido else 0)
+        pistas(r, c["pista"])
+        color = c["acento"] if k < 8 else c["icono"]
+        px(r, ICONO_X, ICONO_Y + (1 if hundido else 0), ICONOS[de if k < 6 else a], {"X": color})
+        return im
+    return capa
+
+
+def desliza(c, sentido):
+    """Deslizar: el ícono de siguiente/anterior sale disparado hacia ese lado dejando una estela de arcoíris."""
+    ico = "siguiente" if sentido > 0 else "anterior"
+    def capa(i):
+        im, r = capa_boton()
+        k = max(i, 4)
+        if k >= 10:
+            return im  # vuelve a verse el botón normal de abajo
+        marco(r, c["acento"], c["hundido"])
+        x = ICONO_X + sentido * (k - 4) * 4
+        largo = 2 + (k - 4) * 3
+        a, b = (x - largo, x - 1) if sentido > 0 else (x + 9, x + 8 + largo)  # estela detrás del ícono
+        a, b = max(a, BX + 1), min(b, BX + BW - 2)
+        for n, y in enumerate((ICONO_Y + 1, ICONO_Y + 3, ICONO_Y + 5)):
+            if a <= b:
+                r(a, y, b, y, c["estela"][(n * 2 + k) % 6])
+        for dy, fila in enumerate(ICONOS[ico]):
+            for dx, ch in enumerate(fila):
+                if ch == "X" and BX + 1 <= x + dx <= BX + BW - 2:
+                    r(x + dx, ICONO_Y + dy, x + dx, ICONO_Y + dy, c["acento"])
+        return im
+    return capa
+
+
+def rafaga(i):
+    """Cambio de mood: píxeles del arcoíris que cruzan el panel y vuelan hacia la cabeza del gato."""
+    im = Image.new("RGBA", (W + PW, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    for n in range(26):
+        y0, v, col = (n * 7) % H, 6 + (n * 3) % 5, RAIN[n % 6]  # pseudoazar fijo: misma ráfaga siempre
+        x = W + PW - 1 - (i - n % 4) * v
+        y = round(y0 + (11 - y0) * min(1, max(0, (W + PW - x) / (PW + 20))))
+        if W - 14 <= x < W + PW and i >= n % 4:
+            d.rectangle([x, y, x + 1, y], fill=col)
+    if i in (7, 8):  # destello al llegar a la cabeza
+        d.rectangle([W - 16, 4, W - 4, 16], outline=WHT)
+    return im
+
+
 CAPAS = {
     "base": lambda i: base(i),
     "base_matrix": lambda i: base(i, MATRIX, (0, 12, 0), (0, 200, 50)),
@@ -326,13 +453,24 @@ CAPAS = {
     "lapiz": lapiz, "gorro_navidad": gorro_navidad, "chupalla": chupalla, "sombrero_bruja": sombrero_bruja,
     "gorro_fiesta": gorro_fiesta, "corbata": corbata, "control": control, "palomitas": palomitas, "cafe": cafe,
     "globo": globo, "sin_red": sin_red, "derretido": derretido, "destello": destello,
+    # panel (50 px) y ráfaga (96 px): el plugin las ubica por prefijo
+    "rafaga": rafaga,
 }
+
+for _e, _c in ESQUEMAS.items():  # cielo y botón con los colores de cada base: panel_play_matrix, toque_a_pausa_base…
+    CAPAS.update({
+        f"cielo_{_e}": lambda i, c=_c: cielo(i, c["cielo"], c["estrella"]),
+        f"panel_apagado_{_e}": panel(_c), f"panel_play_{_e}": panel(_c, "play"), f"panel_pausa_{_e}": panel(_c, "pausa"),
+        f"toque_a_pausa_{_e}": toque(_c, "play", "pausa"), f"toque_a_play_{_e}": toque(_c, "pausa", "play"),
+        f"desliza_siguiente_{_e}": desliza(_c, 1), f"desliza_anterior_{_e}": desliza(_c, -1),
+    })
 
 
 def tira(fn):
-    out = Image.new("RGBA", (W * S * N, H * S), (0, 0, 0, 0))
+    ancho = fn(0).width
+    out = Image.new("RGBA", (ancho * S * N, H * S), (0, 0, 0, 0))
     for i in range(N):
-        out.paste(fn(i).resize((W * S, H * S), Image.NEAREST), (i * W * S, 0))
+        out.paste(fn(i).resize((ancho * S, H * S), Image.NEAREST), (i * ancho * S, 0))
     return out
 
 
@@ -374,7 +512,8 @@ def validar_apps(cfg, plantilla):
 if __name__ == "__main__":
     tiras = {n: tira(fn) for n, fn in CAPAS.items()}
     for n, t in tiras.items():
-        assert t.size == (W * S * N, H * S), n
+        ancho = W + PW if n == "rafaga" else PW if n.startswith(("cielo_", "panel_", "toque_", "desliza_")) else W
+        assert t.size == (ancho * S * N, H * S), n
     # vistas para el README: GIF por estado y una lámina con todos
     A, B = W * S * 2, H * S * 2  # vistas al doble, para que se lean en GitHub
     lam = Image.new("RGBA", (A * 2 + 40, (B + 44) * ((len(VISTAS) + 1) // 2)), (24, 24, 24, 255))
@@ -386,6 +525,23 @@ if __name__ == "__main__":
         x, y = (k % 2) * (A + 40), (k // 2) * (B + 44)
         lam.paste(fr[3], (x, y)); d.text((x, y + B + 8), nombre, fill=(230, 230, 230), font=fuente)
     lam.save(os.path.join(HERE, "previews", "all-variants.png"))
+    # widget completo: sin reproductor → empieza la música (ráfaga) → toque en siguiente → pausa
+    def widget(i, capas, panel_capas):
+        im = Image.new("RGBA", (W + PW, H))
+        im.paste(compuesto(capas, i).resize((W, H), Image.NEAREST), (0, 0))
+        e = capas[0][5:] or "base"  # base_matrix → matrix
+        for c in ["cielo"] + panel_capas:
+            c = c if c == "rafaga" else f"{c}_{e}"
+            im.alpha_composite(CAPAS[c](i), (W if c != "rafaga" else 0, 0))
+        return im
+    seq = [widget(i, ["base"], ["panel_apagado"]) for i in range(N)]
+    seq += [widget(i, ["base", "notas"] if i >= 8 else ["base"], ["panel_apagado", "rafaga"]) for i in range(N)]
+    # las animaciones usan los cuadros 4 a 11 de su tira, igual que en el plugin
+    seq += [widget(i, ["base", "notas"], ["panel_pausa"] + (["desliza_siguiente"] if i >= 4 else [])) for i in range(N)]
+    seq += [widget(i, ["base", "notas"], ["panel_pausa"] + (["desliza_anterior"] if i >= 4 else [])) for i in range(N)]
+    seq += [widget(i, ["base"], ["panel_play"] + (["toque_a_play"] if i >= 4 else [])) for i in range(N)]
+    seq = [f.convert("RGB").resize(((W + PW) * S * 2, H * S * 2), Image.NEAREST) for f in seq]
+    seq[0].save(os.path.join(HERE, "previews", "media.gif"), save_all=True, append_images=seq[1:], duration=90, loop=0)
     # NyanCat.swift = plantilla + sprites embebidos
     datos = ",\n".join(f'    "{n}": "{base64.b64encode(png(t)).decode()}"' for n, t in tiras.items())
     plantilla = open(os.path.join(HERE, "NyanCat.swift.in")).read()
