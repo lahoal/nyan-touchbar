@@ -1,0 +1,82 @@
+{
+  "_leeme": "Apps y títulos de ventana que activan cada mood. Bundle ID exacto, o prefijo terminado en * (com.jetbrains.*). Los títulos se buscan (sin distinguir mayúsculas) solo en la ventana activa de los navegadores. El plugin relee este archivo al guardarlo; no hace falta reiniciar BTT. Para saber el bundle ID de una app: osascript -e 'id of app \"Nombre\"'",
+
+  "apps": {
+    "terminal": [
+      "com.apple.Terminal", "com.googlecode.iterm2", "dev.warp.Warp-Stable", "com.mitchellh.ghostty",
+      "net.kovidgoyal.kitty", "io.alacritty", "org.alacritty", "com.github.wez.wezterm", "co.zeit.hyper",
+      "org.tabby", "com.termius-dmg.mac", "com.cmuxterm.app",
+      "com.microsoft.VSCode", "com.microsoft.VSCodeInsiders", "com.vscodium", "com.todesktop.230313mzl4w4u92",
+      "com.exafunction.windsurf", "dev.kiro.desktop", "com.google.antigravity", "com.google.antigravity-ide",
+      "com.voideditor.Void", "com.trae.app", "dev.zed.Zed", "dev.zed.Zed-Preview", "com.sublimetext.4",
+      "com.panic.Nova", "com.barebones.bbedit", "com.coteditor.CotEditor", "com.macromates.TextMate",
+      "org.vim.MacVim", "com.neovide.neovide", "org.gnu.Emacs",
+      "com.apple.dt.Xcode", "com.google.android.studio", "com.jetbrains.*", "com.rstudio.desktop", "com.rstudio.positron",
+      "com.github.GitHubClient", "com.fournova.Tower3", "com.DanPristupov.Fork", "com.torusknot.SourceTreeNotMAS",
+      "com.axosoft.gitkraken", "com.sublimemerge",
+      "com.postmanlabs.mac", "com.insomnia.app", "com.usebruno.app", "app.yaak.desktop", "com.proxyman.NSProxy",
+      "com.docker.docker", "dev.kdrag0n.MacVirt", "com.tinyapp.TablePlus", "org.jkiss.dbeaver.core.product",
+      "com.sequel-ace.sequel-ace", "at.eggerapps.Postico", "io.beekeeperstudio.desktop",
+      "com.anthropic.claudefordesktop", "com.openai.codex", "com.conductor.app"
+    ],
+    "diseno": [
+      "com.figma.Desktop", "com.bohemiancoding.sketch3", "com.framer.electron", "com.design.spline", "io.zeplin.osx",
+      "com.canva.CanvaDesktop", "com.canva.affinity", "com.seriflabs.affinitydesigner2", "com.seriflabs.affinityphoto2",
+      "com.seriflabs.affinitypublisher2", "com.pixelmatorteam.pixelmator.x",
+      "com.adobe.Photoshop", "com.adobe.illustrator", "com.adobe.InDesign", "com.adobe.xd", "com.adobe.LightroomClassicCC7",
+      "com.adobe.lightroomCC", "com.adobe.PremierePro*", "com.adobe.AfterEffects*",
+      "org.blenderfoundation.blender", "org.krita", "org.gimp.gimp*", "org.inkscape.Inkscape", "org.darktable",
+      "com.apple.FinalCut", "com.blackmagic-design.DaVinciResolve", "com.lemon.lvoverseas", "org.kde.Kdenlive",
+      "com.meltytech.Shotcut", "com.apple.freeform", "com.jgraph.drawio.desktop", "com.electron.realtimeboard"
+    ],
+    "escritura": [
+      "com.apple.Notes", "com.apple.TextEdit", "com.apple.iWork.Pages", "com.apple.Pages", "com.apple.iWork.Numbers",
+      "com.apple.Numbers", "com.apple.iWork.Keynote", "com.apple.Keynote",
+      "com.microsoft.Word", "com.microsoft.Excel", "com.microsoft.Powerpoint", "com.microsoft.onenote.mac",
+      "org.libreoffice.script", "asc.onlyoffice.ONLYOFFICE", "com.kingsoft.wpsoffice.mac.global",
+      "md.obsidian", "notion.id", "net.shinyfrog.bear", "com.ulyssesapp.mac", "pro.writer.mac",
+      "com.literatureandlatte.scrivener3", "com.agiletortoise.Drafts-OSX", "com.lukilabs.lukiapp", "abnerworks.Typora",
+      "com.github.marktext.marktext", "group.app.cyan.markedit", "com.zettlr.app", "com.electron.logseq",
+      "net.cozic.joplin-desktop", "com.evernote.Evernote", "com.automattic.simplenote", "org.standardnotes.standardnotes",
+      "com.anytype.anytype", "io.capacities.app", "pro.affine.app", "app.projectmeta.projectmeta", "org.zotero.zotero"
+    ],
+    "chat": [
+      "com.tinyspeck.slackmacgap", "com.hnc.Discord", "com.hnc.DiscordPTB", "com.hnc.DiscordCanary", "dev.vencord.vesktop",
+      "net.whatsapp.WhatsApp", "desktop.WhatsApp", "ru.keepcoder.Telegram", "com.tdesktop.Telegram",
+      "org.whispersystems.signal-desktop", "com.apple.MobileSMS", "com.facebook.archon", "com.microsoft.teams",
+      "com.microsoft.teams2", "im.riot.app", "Mattermost.Desktop", "org.zulip.zulip-electron", "chat.rocket",
+      "com.automattic.beeper.desktop", "com.wearezeta.zclient.mac", "com.viber.osx", "jp.naver.line.mac",
+      "com.kakao.KakaoTalkMac", "com.tencent.xinWeChat", "com.tencent.qq", "com.teamspeak.TeamSpeak3",
+      "net.sourceforge.mumble.Mumble", "com.electron.guilded"
+    ],
+    "juegos": [
+      "com.valvesoftware.steam", "com.epicgames.EpicGamesLauncher", "net.battle.app", "net.battle.bootstrapper",
+      "com.gog.galaxy", "io.itch.mac", "com.electron.heroic", "com.riotgames.*", "com.roblox.RobloxPlayer",
+      "com.mojang.minecraftlauncher", "org.prismlauncher.PrismLauncher", "com.modrinth.theseus", "com.overwolf.curseforge",
+      "com.moonsworth.client", "com.nvidia.gfnpc.mall", "com.moonlight-stream.Moonlight", "com.playstation.RemotePlay",
+      "org.openemu.OpenEmu", "com.libretro.RetroArch", "org.dolphin-emu.dolphin", "io.playcover.PlayCover",
+      "com.isaacmarovitz.Whisky", "com.paulthetall.portingkit", "com.apple.Chess", "com.wildfiregames.0ad"
+    ],
+    "video": [
+      "com.apple.TV", "com.apple.QuickTimePlayerX", "com.colliderli.iina", "org.videolan.vlc", "io.mpv",
+      "com.firecore.infuse", "tv.plex.desktop", "tv.jellyfin.player", "org.xbmc.kodi", "com.stremio.stremio-shell-macos",
+      "com.movist.MovistPro", "com.Eltima.ElmediaPlayer", "com.nuvio.media.desktop", "com.electron.iptvnator"
+    ]
+  },
+
+  "navegadores": [
+    "com.apple.Safari", "com.apple.SafariTechnologyPreview", "com.google.Chrome", "com.brave.Browser", "org.mozilla.firefox",
+    "com.microsoft.edgemac", "company.thebrowser.Browser", "company.thebrowser.dia", "app.zen-browser.zen",
+    "com.vivaldi.Vivaldi", "com.operasoftware.Opera", "com.kagi.kagimacOS", "org.chromium.Chromium", "net.imput.helium",
+    "io.gitlab.librewolf-community.librewolf", "ai.perplexity.comet", "com.openai.atlas", "com.duckduckgo.macos.browser"
+  ],
+
+  "titulos": {
+    "terminal": ["GitHub", "GitLab", "Codespaces", "Stack Overflow", "localhost:"],
+    "diseno": ["Penpot", "Figma", "Canva", "Excalidraw", "Miro", "Framer", "Photopea", "tldraw"],
+    "escritura": ["Google Docs", "Documentos de Google", "Google Sheets", "Hojas de cálculo de Google", "Google Slides",
+                  "Presentaciones de Google", "Notion", "Overleaf"],
+    "chat": ["WhatsApp", "Slack", "Discord", "Telegram", "Messenger", "Google Chat", "Microsoft Teams"],
+    "video": ["YouTube", "Netflix", "Twitch", "Prime Video", "Disney+", "HBO Max", "Crunchyroll", "Vimeo", "MUBI", "Apple TV"]
+  }
+}

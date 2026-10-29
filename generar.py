@@ -4,7 +4,7 @@ Grilla de 46x20 px, escala 3 -> 138x60 px (69x30 pt en la Touch Bar).
 Cada capa es una tira de 12 cuadros. Las bases son opacas; los accesorios, transparentes.
 Uso: python3 generar.py   (escribe NyanCat.swift, previews/)
 """
-import base64, io, os
+import base64, io, json, os, re
 from PIL import Image, ImageDraw, ImageFont
 
 W, H, S, N = 46, 20, 3, 12
@@ -167,6 +167,136 @@ def sudor(i):
     return im
 
 
+def px(r, x0, y0, filas, colores):
+    """Dibuja un patrón de texto: cada carácter distinto de '.' es una clave de `colores`."""
+    for dy, fila in enumerate(filas):
+        for dx, ch in enumerate(fila):
+            if ch != ".":
+                r(x0 + dx, y0 + dy, x0 + dx, y0 + dy, colores[ch])
+
+
+def lapiz(i):
+    im, r = lienzo()
+    _, hb, hx = pose(i)
+    px(r, hx + 9, 0 + hb, ["....pp", "...yyp", "..yyy.", ".yyy..", "kyy...", "k....."],
+       {"p": PINK, "y": YEL, "k": (60, 60, 60)})
+    return im
+
+
+def gorro_navidad(i):
+    im, r = lienzo()
+    _, hb, hx = pose(i)
+    ROJO = (220, 30, 40)
+    for n, (a, z) in enumerate([(1, 11), (2, 11), (4, 11), (6, 12), (8, 13)]):  # cono que cae hacia atrás
+        r(hx + a, 5 - n + hb, hx + z, 5 - n + hb, ROJO)
+    r(hx, 6 + hb, hx + 12, 6 + hb, WHT)  # borde de piel
+    r(hx + 13, 0 + hb, hx + 15, 2 + hb, WHT)  # pompón
+    return im
+
+
+def chupalla(i):
+    im, r = lienzo()
+    _, hb, hx = pose(i)
+    PAJA, SOMBRA, CINTA = (235, 205, 120), (185, 145, 70), (210, 30, 40)
+    r(hx - 2, 6 + hb, hx + 14, 6 + hb, PAJA); r(hx - 1, 7 + hb, hx + 13, 7 + hb, SOMBRA)  # ala ancha
+    r(hx + 3, 2 + hb, hx + 9, 5 + hb, PAJA); r(hx + 3, 5 + hb, hx + 9, 5 + hb, CINTA)
+    r(hx + 4, 3 + hb, hx + 4, 4 + hb, SOMBRA); r(hx + 7, 3 + hb, hx + 7, 4 + hb, SOMBRA)  # tejido
+    return im
+
+
+def sombrero_bruja(i):
+    im, r = lienzo()
+    _, hb, hx = pose(i)
+    NEGRO, LILA = (35, 20, 50), (130, 60, 190)
+    r(hx - 1, 6 + hb, hx + 13, 6 + hb, NEGRO)  # ala
+    for n, (a, z) in enumerate([(3, 10), (4, 9), (5, 9), (6, 8), (7, 9)]):
+        r(hx + a, 5 - n + hb, hx + z, 5 - n + hb, NEGRO)
+    r(hx + 10, 1 + hb, hx + 11, 1 + hb, NEGRO)  # punta doblada
+    r(hx + 3, 5 + hb, hx + 10, 5 + hb, LILA); r(hx + 6, 5 + hb, hx + 7, 5 + hb, YEL)  # cinta y hebilla
+    return im
+
+
+CONFETI = [(255, 60, 60), (255, 230, 0), (0, 200, 255), (120, 255, 80), (255, 120, 255)]
+
+
+def gorro_fiesta(i):
+    im, r = lienzo()
+    _, hb, hx = pose(i)
+    for n, (a, z) in enumerate([(3, 9), (4, 8), (4, 8), (5, 7), (6, 6)]):
+        r(hx + a, 6 - n + hb, hx + z, 6 - n + hb, CONFETI[n % len(CONFETI)])
+    r(hx + 5, 0 + hb, hx + 7, 1 + hb, YEL)  # pompón
+    for n, x in enumerate((2, 9, 34, 41, 18)):  # confeti que cae
+        r(x, (i + n * 5) % H, x, (i + n * 5) % H, CONFETI[n])
+    return im
+
+
+def corbata(i):
+    im, r = lienzo()
+    _, hb, hx = pose(i)
+    ROJO, OSC = (200, 30, 40), (120, 10, 20)
+    px(r, hx + 5, 16 + hb, ["WkkW", ".rr.", ".rr.", ".ro."], {"W": WHT, "k": OSC, "r": ROJO, "o": OSC})
+    return im
+
+
+def control(i):
+    im, r = lienzo()
+    _, hb, hx = pose(i)
+    luz = (255, 60, 60) if (i // 2) % 2 else (60, 160, 255)
+    px(r, hx + 9, 13 + hb, [".gggggggg.", "ggwggggbgg", "gwwwggbgbg", "ggwgggg.gg", ".gg....gg."],
+       {"g": (90, 90, 100), "w": WHT, "b": luz})
+    return im
+
+
+def palomitas(i):
+    im, r = lienzo()
+    _, hb, hx = pose(i)
+    ROJO = (220, 30, 40)
+    x = hx + 14
+    for n in range(5):  # caja a rayas
+        r(x + n, 14 + hb, x + n, 19, ROJO if n % 2 == 0 else WHT)
+    px(r, x, 12 + hb, [".ywy.", "wwyww"], {"w": WHT, "y": (255, 220, 120)})
+    salto = [0, 1, 2, 3, 2, 1][i % 6]  # una palomita que salta
+    if i % 12 < 6:
+        r(x + 3, 11 - salto + hb, x + 3, 11 - salto + hb, WHT)
+    return im
+
+
+def cafe(i):
+    im, r = lienzo()
+    _, hb, hx = pose(i)
+    px(r, hx + 14, 14 + hb, ["wwww.", "cccww", "wwww.w", "wwwww", "wwww."], {"w": WHT, "c": (110, 60, 30)})
+    for n in range(3):  # vapor ondulado que sube
+        y = 13 - ((i // 2 + n * 2) % 6)
+        r(hx + 15 + ((y + n) % 2), y + hb, hx + 15 + ((y + n) % 2), y + hb, (200, 200, 220))
+    return im
+
+
+def globo(i):
+    im, r = lienzo()
+    px(r, 1, 0, [".WWWWWWWW.", "WWWWWWWWWW", "WWWWWWWWWW", ".WWWWWWWW.", "........W."], {"W": WHT})
+    for n in range(1 + (i // 3) % 3):  # "escribiendo…"
+        r(3 + n * 2, 2, 3 + n * 2, 2, NAVY)
+    return im
+
+
+def sin_red(i):
+    im, r = lienzo()
+    b = pose(i)[0]
+    if (i // 3) % 2 == 0:
+        return im  # parpadea
+    px(r, 16, 5 + b, [".XX.", "X..X", "...X", "..X.", ".X..", "....", ".X.."], {"X": WHT})
+    return im
+
+
+def derretido(i):
+    im, r = lienzo()
+    b = pose(i)[0]
+    for x, fase in ((17, 0), (22, 2), (26, 1)):
+        largo = 1 + ((i // 2 + fase) % 3)  # gotas de glaseado que cuelgan
+        r(x, 16 + b, x, min(H - 1, 16 + b + largo), PINK)
+    return im
+
+
 CAPAS = {
     "base": lambda i: base(i),
     "base_matrix": lambda i: base(i, MATRIX, (0, 12, 0), (0, 200, 50)),
@@ -174,6 +304,9 @@ CAPAS = {
     "notas": notas, "lentes_hacker": lentes_hacker, "audifonos": audifonos, "boina": boina,
     "gorro_noche": gorro_noche, "dormido": lambda i: ojos(i, "dormido"),
     "cansado": lambda i: ojos(i, "cansado"), "zzz": zzz, "rayo": rayo, "sudor": sudor,
+    "lapiz": lapiz, "gorro_navidad": gorro_navidad, "chupalla": chupalla, "sombrero_bruja": sombrero_bruja,
+    "gorro_fiesta": gorro_fiesta, "corbata": corbata, "control": control, "palomitas": palomitas, "cafe": cafe,
+    "globo": globo, "sin_red": sin_red, "derretido": derretido,
 }
 
 
@@ -201,7 +334,22 @@ VISTAS = {  # lo que el plugin muestra en cada estado (ver NyanCat.swift.in, cap
     "low-battery": ["base_destenida", "cansado"], "charging": ["base", "rayo"],
     "late-night": ["base", "gorro_noche", "dormido", "zzz"], "high-cpu": ["base", "sudor"],
     "terminal-music": ["base_matrix", "lentes_hacker", "notas"],
+    "writing": ["base", "lapiz"], "chat": ["base", "globo"], "games": ["base", "control"],
+    "video": ["base", "palomitas"], "video-call": ["base", "audifonos", "corbata"], "idle": ["base", "dormido", "zzz"],
+    "morning": ["base", "cafe"], "offline": ["base", "sin_red"], "hot": ["base", "derretido"],
+    "christmas": ["base", "gorro_navidad"], "fiestas-patrias": ["base", "chupalla"],
+    "halloween": ["base", "sombrero_bruja"], "new-year": ["base", "gorro_fiesta"],
 }
+
+def validar_apps(cfg, plantilla):
+    """Cada categoría de apps.json debe ser un estado que la plantilla reconozca, con bundle IDs bien formados."""
+    for seccion in ("apps", "titulos"):
+        for cat, lista in cfg[seccion].items():
+            assert f'"{cat}"' in plantilla, f"{seccion}.{cat} no es un estado conocido"
+            assert len(lista) == len(set(lista)), f"{seccion}.{cat} tiene repetidos"
+    for i in [x for lista in cfg["apps"].values() for x in lista] + cfg["navegadores"]:
+        assert re.fullmatch(r"[\w.-]+\*?", i) and "." in i, f"bundle ID raro: {i}"
+
 
 if __name__ == "__main__":
     tiras = {n: tira(fn) for n, fn in CAPAS.items()}
@@ -221,6 +369,8 @@ if __name__ == "__main__":
     # NyanCat.swift = plantilla + sprites embebidos
     datos = ",\n".join(f'    "{n}": "{base64.b64encode(png(t)).decode()}"' for n, t in tiras.items())
     plantilla = open(os.path.join(HERE, "NyanCat.swift.in")).read()
-    assert "/*SPRITES*/" in plantilla
-    open(os.path.join(HERE, "NyanCat.swift"), "w").write(plantilla.replace("/*SPRITES*/", datos))
+    assert "/*SPRITES*/" in plantilla and "/*APPS*/" in plantilla
+    apps = open(os.path.join(HERE, "apps.json")).read().strip()
+    validar_apps(json.loads(apps), plantilla)
+    open(os.path.join(HERE, "NyanCat.swift"), "w").write(plantilla.replace("/*SPRITES*/", datos).replace("/*APPS*/", apps))
     print("ok:", len(tiras), "capas,", len(VISTAS), "vistas")

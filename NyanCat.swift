@@ -7,7 +7,9 @@
 // ARCHIVO GENERADO por generar.py (editar NyanCat.swift.in, no este).
 import Cocoa
 import CoreAudio
+import CoreMediaIO
 import IOKit.ps
+import Network
 
 // Tiras de 12 cuadros (138x60 px c/u), PNG en base64.
 private let sprites: [String: String] = [
@@ -23,16 +25,129 @@ private let sprites: [String: String] = [
     "cansado": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACKElEQVR42u3cMQ6EIBRF0YebpWMxdKyWaaeYQqMmOpxTa6O3+An5JAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAXKz4BPu11uaR53vv5Yp3AQDMJ+gEnQAA5hPzCTr5tvn9AAAAAAAA7+KABwAAAAAAIK5oW8IY4+fqVq213PkusRJodVQzmtGJTjCfoBN0gpkEzWhGJzoxn5hPWL4TGzwAAAAAAABxRRsAAAAAAABxRdsTzRPfdPofsRIYq6NoBp1gPkEn6AQziZlEM5pBJ5hP0Els8AAAAAAAAMQVbQAAAAAAAMQVbRArgVZH0Qw6AQDMJGYSzWgGnQDEBg8AAAAAAEAc8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPyjD/+G2BVTcW95AAAAAElFTkSuQmCC",
     "zzz": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACKklEQVR42u3cMQ6AMAwEwTP//7NpU5ICRJKZngZtZ10qg+7uTKiqCsfRCTpBJ6zSicZ0ohN0gk7YqRON6UQnOtGJTnTC6PILAAAAAAAA4sADAAAAAADAe2p2AmZmhU7QCTph9U40phOdoBN0wk6daEwnOtGJTnSik1jwAAAAAAAAEAceAAAAAAAA8s0TbWZWxBwPnaATzM/RCTrRiU50gudx0Ak6QSc6iQUPAAAAAAAAceABAAAAAADIwU+0jTOrRx+bYuX0GaBO0Ak64c+daEwnOkEn6ISdOtGYTnSiE53oRCfEggcAAAAAACAOPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAnOkGpXiAJECBg5AAAAAASUVORK5CYII=",
     "rayo": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACH0lEQVR42u3csQ2AMBAEwQVRBf3XRhumARIgwWimBOuCt173BQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABPLJ4AAADmNY7G5aC/m/UBAAD/nT9bPQEAAAAAAEAWPAAAAAAAAOREGwCkYoycyAmyAQCYVZATZINKgwcAAAAAACALHgAAAAAAAHKiDQBSMUZOvI5s3Br0ZQYAMMciJ/jvpMEDAAAAAABAFjwAAAAAAADkRBsApGKMnOC0BQCAORY5wX8nDR4AAAAAAACy4AEAAAAAACAn2gAgFWPkBNkAADCrICfIRho8AAAAAAAAZMEDAAAAAADAS5snAIBUjJETpiIbAIA5FjnBfwcNHgAAAAAAgCx4AAAAAAAAyIk2AEjFGDlBNgAAzCrICbJBGjwAAAAAAABZ8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHzcCfo3Wwp0OeSMAAAAAElFTkSuQmCC",
-    "sudor": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACbElEQVR42u3cMQ6CQBRF0QtxKa6OBbE69gIFsSTRggTknMra/NE/mbxXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/GDwFezmZV0/n6f34HsBAADcdwAAgMsafQUAAAAAAAB54AEAAAAAAOA8r9QUAACqfjAb4L4DANhpMRskwQMAAAAAAEAeeAAAAAAAAKgeXtEGiWECqPrBbGCnApxNwG+gnRazwQ13KgkeAAAAAACAVLQBAAAAAACQirZT3D1yLj4vholzCgB2Ktx3cDZxTgHgmTuVBA8AAAAAAEAq2gAAAAAAAEhFG4nPg3OKaotU/ZgNswHYowDnFDutndZsmA2oJHgAAAAAAADywAMAAAAAAEAq2iAxzP487gqptgCzgWoLwNl03wE7LWYD3HeS4AEAAAAAAEhFGwAAAAAAAKloI9UWJO7qnIq+AuC/Huwe+A10Tt13APBfnwQPAAAAAABAHngAAAAAAABIRRsAib6m2gLMBgCA+46dFrMBJMEDAAAAAACQBx4AAAAAAAAuRCQOgMPKAtFpAADAfQcAkuABAAAAAAAgDzwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwDc2gSrE456VVEwAAAAASUVORK5CYII="
+    "sudor": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACbElEQVR42u3cMQ6CQBRF0QtxKa6OBbE69gIFsSTRggTknMra/NE/mbxXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/GDwFezmZV0/n6f34HsBAADcdwAAgMsafQUAAAAAAAB54AEAAAAAAOA8r9QUAACqfjAb4L4DANhpMRskwQMAAAAAAEAeeAAAAAAAAKgeXtEGiWECqPrBbGCnApxNwG+gnRazwQ13KgkeAAAAAACAVLQBAAAAAACQirZT3D1yLj4vholzCgB2Ktx3cDZxTgHgmTuVBA8AAAAAAEAq2gAAAAAAAEhFG4nPg3OKaotU/ZgNswHYowDnFDutndZsmA2oJHgAAAAAAADywAMAAAAAAEAq2iAxzP487gqptgCzgWoLwNl03wE7LWYD3HeS4AEAAAAAAEhFGwAAAAAAAKloI9UWJO7qnIq+AuC/Huwe+A10Tt13APBfnwQPAAAAAABAHngAAAAAAABIRRsAib6m2gLMBgCA+46dFrMBJMEDAAAAAACQBx4AAAAAAAAuRCQOgMPKAtFpAADAfQcAkuABAAAAAAAgDzwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwDc2gSrE456VVEwAAAAASUVORK5CYII=",
+    "lapiz": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACeklEQVR42u3csY3DMBBE0aGhKlwL+3FNrsMtsBa3QacMlAoyse+FF8o/WOAwbGEr8z3n2d/bqzVfBwBwn6ATdAIA4D6hRicPnx4AAAAAAGAv/sEDAAAAAACwmcMn+H/zm2XetSy6PtPHwXQUzaAT3CfoBJ3gJnGToBl0gvuEgp1Y8AAAAAAAAMQTbQAAAAAAAMQTbak97zpnIorpKJpBJ7hP0Ak6wU0CmkEnuE+o2YkFDwAAAAAAQDzRBgAAAAAAwIVMyrLZvOvpN0MzaAadoAd0gk7QjGbQDDpBD1TvxIIHAAAAAAAgnmgDAAAAAADgQodPcK/e+zLvGjEDJKajaAad4D5BJ+gEN4mbBM2gE9wn6CQWPAAAAAAAAPFEGwAAAAAAAPFEG6Z/xHQUzaAT3CfoBJ3gJtEPmkEnuE/QSSx4AAAAAAAA4ok2AAAAAAAA4om2ysYYZoDEdBTNoBPcJ+gEnYCbBM2gE9wn6CQWPAAAAAAAAPFEGwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAU9gMu198dN316xQAAAABJRU5ErkJggg==",
+    "gorro_navidad": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAAClklEQVR42u3cMWpCURBA0Tsh60hlkf2vxiJVNjJ2QqqAYOLXc7qARXheYeAxb+JQdnd/+8zMjJMCAMwn6ASdAACYT3jeTt4cPQAAAAAAwLG44AEAAAAAADiYd0fw974+PtcpkNVRNINOMJ+gE3QCZhI0g04wn6CTbPAAAAAAAADkiTYAAAAAAADyRFtWukA/aAadoAF0gk7QD2gGnaABdJINHgAAAAAAgDzRBgAAAAAAQJ5oy0rXTU7f57n+MePA9YNmNINOMJ+gE3SCftAMOkED5hNevBMbPAAAAAAAAHmiDQAAAAAAgDzRlvVP9JPVUc1oBp1gPkEn6AQziZlEM5rRiU40ADqpbPAAAAAAAADkggcAAAAAAIA80Zb1LjSDZtCJU0AP6ASdoBk0g07QA+gkGzwAAAAAAAC54AEAAAAAACBPtP2H3X2o9a6t6/8zM+MbykogmkEnmE/MJ+gEnWAmQTPoBPOJ+UQnL92JDR4AAAAAAIA80QYAAAAAAMAdWS+DnmMl8McP2+qoZjSjE50AAGYSNKMZnegEyAYPAAAAAAAAueABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADg4V0AgqYChh9gR6kAAAAASUVORK5CYII=",
+    "chupalla": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACuklEQVR42u3cIW7CYBjH4X8XrlAxM41CFIveNCeZ5QgYBDeZZXq2FahpDIJDgCMLWTICLONbn0c1pCGB/sSbNO+XAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAqcpfcJldO9vf+jvr8dzzAADMJ+gEnQAAmE/QyY8ePHIAAAAAAICyeMEDAAAAAABQmIG/4HrdR3e8bibNxfcQK4GxOqoZzaATzCfoBJ1gJkEzmtGJTjCfoJPY4AEAAAAAAIgj2gAAAAAAAIgj2iBWAmN1FM2gEwDATIJmNINOAGKDBwAAAAAAIF7wAAAAAAAAEEe0lWk7fTteP379fLH59v5z7gEAMJ+gE3QCAGA+QSexwQMAAAAAABBHtAEAAAAAAPC3qj7/+F072/+X31KP55Wc78/6aXjzxkabT89aM5rRiU7MJ+YTnegEnWAmQTOa0YlOzCfmE530vBMbPAAAAAAAAHFEGwAAAAAAAHFE269bLZ+LW/t6eX33/GIlMFZHNaMZnejEfGI+0YlO0AlmEjOJZjSjE52YT8wnOuldJzZ4AAAAAAAA4og2AAAAAAAA4og2iJXAWB3VjGZ0ohMAwExiJtGMZnSiE4AkNngAAAAAAADiBQ8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQOkOb5wY4N5hunMAAAAASUVORK5CYII=",
+    "sombrero_bruja": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACnUlEQVR42u3csU0CcRyG4VfiCG7gBtRUDME2Uug2DEFFfRuwwe0gjbkKo7mCAPc8pYkW8Ba/xHz/AgAAAAAAAAAAAAAAAAAAAAAAAODHi4/gNt7f1t9zf/c8Dr4nAMB9gk7QCQCA+wSdTFa+QgAAAAAAgMfiHzwAAAAAAAB5oo3+P+8y98N0FM2gE9wn6ASdoBktoRl0gvsEnWTBAwAAAAAAkCfaAAAAAAAAyBNtmYVmHojpKJpBJ7hP0Ak6wU2iDTSDTnCfoJMseAAAAAAAAPJEGwAAAAAAAHmiLfOuTAI1oxM0g05wn6ATdIJmdIJm0AnuE3SSBQ8AAAAAAECeaAMAAAAAAOD+vPoI5vncHP+cd30ctld//rU7/vYr09/cn7bmgZkEohmfAjrBfYJO0AluEjSDTsB9gk6y4AEAAAAAAMgTbQAAAAAAANyW2VmPO/k8j4Pvr0VOAjMd1YxmdKIT94n7BJ2gE9wkaEYzOtGJ+8R9opNld2LBAwAAAAAAkCfaAAAAAAAAyBNtkElgpqOa0YxOdAIAuEncJJrRjE50AlBZ8AAAAAAAAOQfPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADyNC5fsOqCe+vVBAAAAAElFTkSuQmCC",
+    "gorro_fiesta": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAADoElEQVR42u3csVEjQRiE0W8JQ5HIIAjCUQgKhyAwFAlpDBaSHKCABTTLe9YZRxWc+q7+uqnupTeM+/vx+uvl6WlpMuMwLt//cfm17388Nz76Pcuu6f48AYB5uU+YPSeH8XD+3o7Lo6zKCQDA+vfJ6fL/ye0X94ycTOHORwsAAAAAAJAHHgAAAAAAAH6OqlmqXt/6eU35yQkyg5wgG8gJcmLKD/+eIDPICbKBKb80eAAAAAAAAMgDDwAAAAAAQCba6Hbnv1AdNeW3vb/L6sbICe4T5AQ5wU2SKT+ZQU7kBPcJcpIGDwAAAAAAQB54AAAAAAAAyETbhK7r3m9RAyfVUWTGlJ+c4D5BTpAT3K5wk5kx5ScnuE+QkzR4AAAAAAAAyAMPAAAAAAAAqmlrOI3x5a/dq5GmEpjqKDKDnGTKz32COxY5wU2CzMgM0+TElJ/7BDlJgwcAAAAAAIA88AAAAAAAAGSibS3jucssyW4783DXP9enP4CdmbxUAlMdRWaQE9wnpvz+YsrPHYuc4CZBZpAT3CeZ8pOTae9YDR4AAAAAAIBMtAEAAAAAANBGJtq25Hr6Y7UPY8IJEVN+KoHIDHKC+wQ5mXIKz5SfnOAmQWaQE9yx7hM5uYGcfGfKT4MHAAAAAAAgE20AAAAAAABkog1SCVQd/RdTfjKDnACAKT9TfrhjZUZO5AQgDR4AAAAAAIA88AAAAAAAAJCJNgDIlB8AAKb8tjblBwCkwQMAAAAAAEAeeAAAAAAAADLRBgCQKT8AADDlB0AaPAAAAAAAAOSBBwAAAAAAIBNtrOt0qb62V30FAMiUHwAApvxM+QFp8AAAAAAAAOSBBwAAAAAAgEy0AZnyAwDIlB8AAJjyIw0eAAAAAACAPPAAAAAAAACQiTYAMuUHAJApPwAASIMHAAAAAAAgDzwAAAAAAABkog0AyJQfAECm/NxmAEAaPAAAAAAAAHngAQAAAAAAIBNtAABkyg8AgEz5AZAGDwAAAAAAQB54AAAAAAAAyEQbP+gwHs7V3ePy6LMHACBTfgAAmfID0uABAAAAAAAgDzwAAAAAAABkog3IlB8AAJnyAwDIlJ8pvzR4AAAAAAAAyAMPAAAAAAAAmWgDIFN+AABkyg8AIA0eAAAAAAAA8sADAAAAAABAJtoAgEz5AQCQKT8ASIMHAAAAAACAPPAAAAAAAACQiTYAADLlBwBApvwA0uABAAAAAAAgDzwAAAAAAAC85wUOU/h0qOLMbgAAAABJRU5ErkJggg==",
+    "corbata": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACIUlEQVR42u3cIQ6DQBCG0X9JXXUtmiv2BFynx+hdiq0eFKGiCWmCgPQ9hUAtn5iEzCYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMfSHMG+qqqW5/v19vWd8f1aP0BrvgEAYD5BJ+gEAMB8gk5+0vm0AAAAAAAA5+IHDwAAAAAAwMlcHMG+Ple3nv1QW+8QK4FWR9EMOsF8gk7QCWYSNKMZdIL5BJ3EBg8AAAAAAEBc0QYAAAAAAEBc0QaxEphYHUUz6AQAMJOgGc2gE4DY4AEAAAAAAIgfPAAAAAAAAMQVbf/nMU0OAQAwn6ATdAIAYD5BJ7HBAwAAAAAAEFe0AQAAAAAAcHAzPaR8Sjs+cFQAAAAASUVORK5CYII=",
+    "control": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACx0lEQVR42u3cu20CYRCF0QuiDmJXQhFLClXZ6VIElRDTCGQ8gpH8y1q8j3MiCwkC+CQPQjMJAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP9g5S0Yj6473IZ8/dPpx+cNAJhP0Ak6AQAwnzCDTtY+HgAAAAAAgGnxAw8AAAAAAECcaCN/X+/q++/H3/v9sek1r7vnc7fno/VAK4GxOqoZzaATzCfohLl00l8vz+duv3RiJjGTaEYz6ATzCYvtxAYPAAAAAABAnGgDAAAAAAAgTrRlCater+tdlWrtqzpnUT1uJdBKoBMomrFujE4wn6ATptJJ9f+lelwnZhIziWZ8R0YnmE9YQic2eAAAAAAAAOJEGwAAAAAAAAPaeAvG43WNq3VdtDpb0SU37+y8VCuBv2mm9QQKmmldI0UnOjGfmE90ohOG6KQ8W1Gc38FMYibRjO/I6ATzCUvoxAYPAAAAAABAnGgDAAAAAABgQCtvwXh0xVrW2+rWB1+H8bfRuhJY9aAZzWhGJzrBfIJO0AlmEjSjGZ3oRCfmE6bViQ0eAAAAAACAONEGAAAAAABAnGgDYnUUzaATAMBMYiZBM+gEIDZ4AAAAAAAA4gceAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPiYO6TyDJJ6ao9MAAAAAElFTkSuQmCC",
+    "palomitas": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAAClElEQVR42u3csW3CABAF0G/kOUIBBVkjU8EEMA7bJAUUZJFLg4wLIxpbwdZ7paEyX+Kkr7sEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICRNV4BADCFqqpu4GgaMweyAQAAACNaeQUAAAAAAABR8AAAAAAAABAn2gCI80oA+K8BAAAgiQ0eAAAAAACAKHgAAAAAAACIE23EaQvkBAAAAACA2OABAAAAAACIggcAAAAAAIDptV7BMtRl353Yyub4+OB68HJ4yVk2AP5rPmm2J/9BciInyAkAYD5BTmKDBwAAAAAAIE60AQAAAAAA8FasiM1YVdXgB/2zbP21Lye5ZMbqKDKDnGA+QU6QE8wkIDPICeYTFpETGzwAAAAAAABxog0AAAAAAIA40caAy8euW/Xa3L6759f1Z1493/7++O1jJdDqKDKDnGA+QU6QE8wkyIzMICeYT5hnTmzwAAAAAAAAxIk2AAAAAAAAJtR6BbBsT1f/vs6958fB7yMzMoOcAABmEmQGOZETIDZ4AAAAAAAAiIIHAAAAAAAgCh4AAAAAAACi4AEAAAAAACAKHgAAAAAAgCh4AAAAAAAAiIIHAAAAAACAKHgAAAAAAACi4AEAAAAAACAKHgAAAAAAAKLgAQAAAAAAQMEDAAAAAAAQBQ8AAAAAAABR8AAAAAAAAHD3B1tOEKEMj922AAAAAElFTkSuQmCC",
+    "cafe": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAAC2UlEQVR42u3csW3CUBRA0esoc6RiCApmyi7MlIYhaDLJp0KiQFgoWIrxOVWaNHBlPWS9VwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACvMfkIAAAAWIvT6Tyuf+/3O79pAQAzCZvt5MNHDAAAAAAAsC5e8AAAAAAAAOREG1kPBDxP0AloA50Ani0AANngAQAAAAAAIC94AAAAAAAAcqINyMkCAAAwuwKeM+gEPaCThTuxwQMAAAAAAJATbQAAAAAAAOREG1kJBDxn0AnaQCcAniEAANngAQAAAAAAyAseAAAAAAAAcqINyMkCAADMseZYwHMGnaANdJINHgAAAAAAgJxoAwAAAAAAICfayEog4HmCTtAJOgHwDAEAyAYPAAAAAABAXvAAAAAAAACQE23MG2OMp77safJ9k/MFAJhP0Ak6AfC7GJ1gPmH9ndjgAQAAAAAAyIk2AAAAAAAAcqKNO74PX7OrXsefX+uBWQm0Oopm0AnmE3SCTjCTaAPNoBPMJ7xXJzZ4AAAAAAAAcqINAAAAAACAnGij166L3v6v9cCsBFodRTPoBPMJOkEnmEnQjGbQCeYTVtWJDR4AAAAAAICcaAMAAAAAACAn2ujvq17WRXVidRTNoBPMJ+gEnWAmMZNoRjPoBPMJ79GJDR4AAAAAAICcaAMAAAAAAGBBnz6C7bAGSE+uEGoGzaATzCfoBJ1gJkEzmkEnmE/4n53Y4AEAAAAAAMiJNgAAAAAAABZkRQzazpqw1VE0g04AADMJmtEMOgGywQMAAAAAAEBe8AAAAAAAAPDYBXpfmGfEab+bAAAAAElFTkSuQmCC",
+    "globo": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACR0lEQVR42u3cMQrCUBBF0ffEJbkn1+Se3NPYWSnY/JjoOVUggcDnNmGYNG/MzGShtg2HpxN0gk7QCTpBJzrRiU50ohN0gk7QCds7OQIAAAAAAIAY8AAAAAAAALBOt1zvsvYVa4A60YlO0Ak6QSfoBJ3oRCc60YlO0Ak6ITZ4AAAAAAAAYsADAAAAAADAjp0/eaiX6/N67jenhk7QCV/pRD/oBJ2wh070oxOdoBN8F6MTdEJs8AAAAAAAABADHgAAAAAAgN/WdzdmZpa+uK3jPz6doBN0gk7QCTrRiU50ohOdoBN0gk6IDR4AAAAAAABiwAMAAAAAAJB/+EVbFq+PWfVCJ+gEnaATdIJO0AnoBJ2gE3RCbPAAAAAAAADEgAcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAlx5iN/8dOugdDAAAAABJRU5ErkJggg==",
+    "sin_red": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACJ0lEQVR42u3cQQrCQBBE0T/B+1+5vUACio4BeW/tKtaih6a6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeMPyCQAA4F4zM6fD+lrmdQAAwHuHU4dPAAAAAAAAkAUPAAAAAAAAOdEGAKkYIyf8aTau8vDKbwAAzLHICd47afAAAAAAAACQBQ8AAAAAAADf9fAJACAVY+SEn/O/AwDmWOQE7x3S4AEAAAAAAMiCBwAAAAAAgJxoA4BUjJET6NOTFwAA5ljkBO8dNHgAAAAAAACy4AEAAAAAAGAjFSgASMUYOUE2AADMKsgJspEGDwAAAAAAAFnwAAAAAAAAkBNtAJCKMXICAADmWOQE0uABAAAAAAAgCx4AAAAAAAByog0AAHLaAgAAwHsnDR4AAAAAAACy4AEAAAAAACAn2gAgFWPkBAAAzLHICaTBAwAAAAAAQBY8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOzwBmAOQRxg7xBYAAAAASUVORK5CYII=",
+    "derretido": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAAB/0lEQVR42u3cQQqEMBAAwY74V9/ka+PND4SASNV9WTR9GAhjAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB8y/jTw8x7zvfBrjF2/nblv9AJAID5BJ2gEwDAfGI+WXHICwAAAAAAIBc8AAAAAAAA7HN6BQBZHUUn6AQAMJ+YT9AJOoFs8AAAAAAAAJALHgAAAAAAAKqffaLNah46AQAwCzk7dAIAYBbKBg8AAAAAAAC54AEAAAAAACCfaMuqFzrBuaMTdKUr5w66Qic4d3SCrnDu2eABAAAAAAAgFzwAAAAAAAAsewCVJZeScfGF2gAAAABJRU5ErkJggg=="
 ]
 
-private let apps: [String: Set<String>] = [
-    "terminal": ["com.apple.Terminal", "com.googlecode.iterm2", "dev.warp.Warp-Stable", "com.mitchellh.ghostty",
-                 "net.kovidgoyal.kitty", "io.alacritty", "com.microsoft.VSCode", "com.apple.dt.Xcode",
-                 "com.todesktop.230313mzl4w4u92", "dev.zed.Zed", "com.sublimetext.4", "com.jetbrains.pycharm",
-                 "com.anthropic.claudefordesktop"],
-    "diseno": ["com.figma.Desktop", "com.bohemiancoding.sketch3", "com.adobe.Photoshop", "com.adobe.illustrator",
-               "com.pixelmatorteam.pixelmator.x", "com.seriflabs.affinitydesigner2", "com.seriflabs.affinityphoto2"],
+// Copia de apps.json embebida; se usa si no existe ~/Library/Application Support/NyanCat/apps.json.
+private let appsPorDefecto = #"""
+{
+  "_leeme": "Apps y títulos de ventana que activan cada mood. Bundle ID exacto, o prefijo terminado en * (com.jetbrains.*). Los títulos se buscan (sin distinguir mayúsculas) solo en la ventana activa de los navegadores. El plugin relee este archivo al guardarlo; no hace falta reiniciar BTT. Para saber el bundle ID de una app: osascript -e 'id of app \"Nombre\"'",
+
+  "apps": {
+    "terminal": [
+      "com.apple.Terminal", "com.googlecode.iterm2", "dev.warp.Warp-Stable", "com.mitchellh.ghostty",
+      "net.kovidgoyal.kitty", "io.alacritty", "org.alacritty", "com.github.wez.wezterm", "co.zeit.hyper",
+      "org.tabby", "com.termius-dmg.mac", "com.cmuxterm.app",
+      "com.microsoft.VSCode", "com.microsoft.VSCodeInsiders", "com.vscodium", "com.todesktop.230313mzl4w4u92",
+      "com.exafunction.windsurf", "dev.kiro.desktop", "com.google.antigravity", "com.google.antigravity-ide",
+      "com.voideditor.Void", "com.trae.app", "dev.zed.Zed", "dev.zed.Zed-Preview", "com.sublimetext.4",
+      "com.panic.Nova", "com.barebones.bbedit", "com.coteditor.CotEditor", "com.macromates.TextMate",
+      "org.vim.MacVim", "com.neovide.neovide", "org.gnu.Emacs",
+      "com.apple.dt.Xcode", "com.google.android.studio", "com.jetbrains.*", "com.rstudio.desktop", "com.rstudio.positron",
+      "com.github.GitHubClient", "com.fournova.Tower3", "com.DanPristupov.Fork", "com.torusknot.SourceTreeNotMAS",
+      "com.axosoft.gitkraken", "com.sublimemerge",
+      "com.postmanlabs.mac", "com.insomnia.app", "com.usebruno.app", "app.yaak.desktop", "com.proxyman.NSProxy",
+      "com.docker.docker", "dev.kdrag0n.MacVirt", "com.tinyapp.TablePlus", "org.jkiss.dbeaver.core.product",
+      "com.sequel-ace.sequel-ace", "at.eggerapps.Postico", "io.beekeeperstudio.desktop",
+      "com.anthropic.claudefordesktop", "com.openai.codex", "com.conductor.app"
+    ],
+    "diseno": [
+      "com.figma.Desktop", "com.bohemiancoding.sketch3", "com.framer.electron", "com.design.spline", "io.zeplin.osx",
+      "com.canva.CanvaDesktop", "com.canva.affinity", "com.seriflabs.affinitydesigner2", "com.seriflabs.affinityphoto2",
+      "com.seriflabs.affinitypublisher2", "com.pixelmatorteam.pixelmator.x",
+      "com.adobe.Photoshop", "com.adobe.illustrator", "com.adobe.InDesign", "com.adobe.xd", "com.adobe.LightroomClassicCC7",
+      "com.adobe.lightroomCC", "com.adobe.PremierePro*", "com.adobe.AfterEffects*",
+      "org.blenderfoundation.blender", "org.krita", "org.gimp.gimp*", "org.inkscape.Inkscape", "org.darktable",
+      "com.apple.FinalCut", "com.blackmagic-design.DaVinciResolve", "com.lemon.lvoverseas", "org.kde.Kdenlive",
+      "com.meltytech.Shotcut", "com.apple.freeform", "com.jgraph.drawio.desktop", "com.electron.realtimeboard"
+    ],
+    "escritura": [
+      "com.apple.Notes", "com.apple.TextEdit", "com.apple.iWork.Pages", "com.apple.Pages", "com.apple.iWork.Numbers",
+      "com.apple.Numbers", "com.apple.iWork.Keynote", "com.apple.Keynote",
+      "com.microsoft.Word", "com.microsoft.Excel", "com.microsoft.Powerpoint", "com.microsoft.onenote.mac",
+      "org.libreoffice.script", "asc.onlyoffice.ONLYOFFICE", "com.kingsoft.wpsoffice.mac.global",
+      "md.obsidian", "notion.id", "net.shinyfrog.bear", "com.ulyssesapp.mac", "pro.writer.mac",
+      "com.literatureandlatte.scrivener3", "com.agiletortoise.Drafts-OSX", "com.lukilabs.lukiapp", "abnerworks.Typora",
+      "com.github.marktext.marktext", "group.app.cyan.markedit", "com.zettlr.app", "com.electron.logseq",
+      "net.cozic.joplin-desktop", "com.evernote.Evernote", "com.automattic.simplenote", "org.standardnotes.standardnotes",
+      "com.anytype.anytype", "io.capacities.app", "pro.affine.app", "app.projectmeta.projectmeta", "org.zotero.zotero"
+    ],
+    "chat": [
+      "com.tinyspeck.slackmacgap", "com.hnc.Discord", "com.hnc.DiscordPTB", "com.hnc.DiscordCanary", "dev.vencord.vesktop",
+      "net.whatsapp.WhatsApp", "desktop.WhatsApp", "ru.keepcoder.Telegram", "com.tdesktop.Telegram",
+      "org.whispersystems.signal-desktop", "com.apple.MobileSMS", "com.facebook.archon", "com.microsoft.teams",
+      "com.microsoft.teams2", "im.riot.app", "Mattermost.Desktop", "org.zulip.zulip-electron", "chat.rocket",
+      "com.automattic.beeper.desktop", "com.wearezeta.zclient.mac", "com.viber.osx", "jp.naver.line.mac",
+      "com.kakao.KakaoTalkMac", "com.tencent.xinWeChat", "com.tencent.qq", "com.teamspeak.TeamSpeak3",
+      "net.sourceforge.mumble.Mumble", "com.electron.guilded"
+    ],
+    "juegos": [
+      "com.valvesoftware.steam", "com.epicgames.EpicGamesLauncher", "net.battle.app", "net.battle.bootstrapper",
+      "com.gog.galaxy", "io.itch.mac", "com.electron.heroic", "com.riotgames.*", "com.roblox.RobloxPlayer",
+      "com.mojang.minecraftlauncher", "org.prismlauncher.PrismLauncher", "com.modrinth.theseus", "com.overwolf.curseforge",
+      "com.moonsworth.client", "com.nvidia.gfnpc.mall", "com.moonlight-stream.Moonlight", "com.playstation.RemotePlay",
+      "org.openemu.OpenEmu", "com.libretro.RetroArch", "org.dolphin-emu.dolphin", "io.playcover.PlayCover",
+      "com.isaacmarovitz.Whisky", "com.paulthetall.portingkit", "com.apple.Chess", "com.wildfiregames.0ad"
+    ],
+    "video": [
+      "com.apple.TV", "com.apple.QuickTimePlayerX", "com.colliderli.iina", "org.videolan.vlc", "io.mpv",
+      "com.firecore.infuse", "tv.plex.desktop", "tv.jellyfin.player", "org.xbmc.kodi", "com.stremio.stremio-shell-macos",
+      "com.movist.MovistPro", "com.Eltima.ElmediaPlayer", "com.nuvio.media.desktop", "com.electron.iptvnator"
+    ]
+  },
+
+  "navegadores": [
+    "com.apple.Safari", "com.apple.SafariTechnologyPreview", "com.google.Chrome", "com.brave.Browser", "org.mozilla.firefox",
+    "com.microsoft.edgemac", "company.thebrowser.Browser", "company.thebrowser.dia", "app.zen-browser.zen",
+    "com.vivaldi.Vivaldi", "com.operasoftware.Opera", "com.kagi.kagimacOS", "org.chromium.Chromium", "net.imput.helium",
+    "io.gitlab.librewolf-community.librewolf", "ai.perplexity.comet", "com.openai.atlas", "com.duckduckgo.macos.browser"
+  ],
+
+  "titulos": {
+    "terminal": ["GitHub", "GitLab", "Codespaces", "Stack Overflow", "localhost:"],
+    "diseno": ["Penpot", "Figma", "Canva", "Excalidraw", "Miro", "Framer", "Photopea", "tldraw"],
+    "escritura": ["Google Docs", "Documentos de Google", "Google Sheets", "Hojas de cálculo de Google", "Google Slides",
+                  "Presentaciones de Google", "Notion", "Overleaf"],
+    "chat": ["WhatsApp", "Slack", "Discord", "Telegram", "Messenger", "Google Chat", "Microsoft Teams"],
+    "video": ["YouTube", "Netflix", "Twitch", "Prime Video", "Disney+", "HBO Max", "Crunchyroll", "Vimeo", "MUBI", "Apple TV"]
+  }
+}
+"""#
+
+private struct ConfigApps: Decodable {
+    var apps: [String: [String]] = [:]
+    var navegadores: [String] = []
+    var titulos: [String: [String]] = [:]
+
+    func coincide(_ id: String, _ patrones: [String]) -> Bool {
+        patrones.contains { $0.hasSuffix("*") ? id.hasPrefix($0.dropLast()) : $0 == id }
+    }
+}
+
+/// Por zona del dibujo, la primera regla cuyo estado esté activo gana; así dos accesorios nunca se pisan.
+private let zonas: [[(estados: [String], capa: String)]] = [
+    [(["terminal"], "base_matrix"), (["bateria_baja"], "base_destenida"), ([], "base")],
+    [(["microfono"], "audifonos"), (["halloween"], "sombrero_bruja"), (["navidad"], "gorro_navidad"),
+     (["fiestas_patrias"], "chupalla"), (["ano_nuevo"], "gorro_fiesta"), (["diseno"], "boina"),
+     (["escritura"], "lapiz"), (["noche"], "gorro_noche")],                                     // cabeza
+    [(["terminal"], "lentes_hacker"), (["noche", "inactivo"], "dormido"), (["bateria_baja"], "cansado")],  // ojos
+    [(["videollamada"], "corbata")],                                                            // cuello
+    [(["juegos"], "control"), (["video"], "palomitas"), (["manana"], "cafe")],                  // frente
+    [(["noche", "inactivo"], "zzz"), (["chat"], "globo")],                                      // arriba a la izquierda
+    [(["musica"], "notas")], [(["cargando"], "rayo")], [(["sin_red"], "sin_red")],
+    [(["cpu"], "sudor")], [(["caliente"], "derretido")],
 ]
 
 class NyanCat: NSObject, BTTPluginInterface {
@@ -42,11 +157,17 @@ class NyanCat: NSObject, BTTPluginInterface {
     private var capas: [String: CALayer] = [:]
     private var activas: [String] = ["base"]
     private var cuadro = 0
-    private var tick = 0
-    private var rapido = false
+    private var intervalo = 0.09
     private var timer: Timer?
+    private var timerEstado: Timer?
     private var cpuPrevio: (uso: UInt64, total: UInt64)?
     private var cpuAltaSeg = 0
+    private var config = ConfigApps()
+    private var configFecha: Date?
+    private let rutaConfig = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Application Support/NyanCat/apps.json")
+    private let red = NWPathMonitor()
+    private var hayRed = true
 
     private lazy var viewController: NSViewController = {
         let vc = NSViewController()
@@ -70,12 +191,16 @@ class NyanCat: NSObject, BTTPluginInterface {
             v.layer?.addSublayer(capa)
             capas[nombre] = capa
         }
+        red.pathUpdateHandler = { [weak self] p in DispatchQueue.main.async { self?.hayRed = p.status == .satisfied } }
+        red.start(queue: .global(qos: .utility))
         actualizarEstado()
         arrancar()
+        timerEstado = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.actualizarEstado() }
+        RunLoop.main.add(timerEstado!, forMode: .common)
         return vc
     }()
 
-    deinit { timer?.invalidate() }
+    deinit { timer?.invalidate(); timerEstado?.invalidate(); red.cancel() }
 
     static func configurationFormItems() -> BTTPluginFormItem? { nil }
 
@@ -85,14 +210,12 @@ class NyanCat: NSObject, BTTPluginInterface {
 
     private func arrancar() {
         timer?.invalidate()
-        timer = Timer(timeInterval: rapido ? 0.045 : 0.09, repeats: true) { [weak self] _ in self?.avanzar() }
+        timer = Timer(timeInterval: intervalo, repeats: true) { [weak self] _ in self?.avanzar() }
         RunLoop.main.add(timer!, forMode: .common)
     }
 
     private func avanzar() {
         cuadro = (cuadro + 1) % 12
-        tick += 1
-        if tick % 11 == 0 { actualizarEstado() }  // ~1 s
         CATransaction.begin(); CATransaction.setDisableActions(true)
         for (nombre, capa) in capas {
             let on = activas.contains(nombre)
@@ -111,32 +234,68 @@ class NyanCat: NSObject, BTTPluginInterface {
             e = Set(forzado.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
         } else {
             if let v = delegate?.getVariable("BTTCurrentlyPlaying"), "\(v)" == "1" || "\(v)" == "1.0" { e.insert("musica") }
-            let app = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
-            for (cat, ids) in apps where ids.contains(app) { e.insert(cat) }
+            e.formUnion(estadosDeApp())
             if microfonoEnUso() { e.insert("microfono") }
+            if camaraEnUso() { e.insert("videollamada") }
             let (pct, cargando) = bateria()
             if cargando { e.insert("cargando") } else if let pct, pct <= 20 { e.insert("bateria_baja") }
-            if Calendar.current.component(.hour, from: Date()) < 6 { e.insert("noche") }
             if cpuAlta() { e.insert("cpu") }
+            if !hayRed { e.insert("sin_red") }
+            if ProcessInfo.processInfo.thermalState.rawValue >= ProcessInfo.ThermalState.serious.rawValue { e.insert("caliente") }
+            let inputCualquiera = CGEventType(rawValue: ~0)!
+            if CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: inputCualquiera) > 300 { e.insert("inactivo") }
+            e.formUnion(estadosDeCalendario(Date()))
         }
-        activas = capasPara(e)
-        if e.contains("cpu") != rapido { rapido = e.contains("cpu"); arrancar() }
+        activas = zonas.compactMap { reglas in reglas.first { $0.estados.isEmpty || !e.isDisjoint(with: $0.estados) }?.capa }
+        let nuevo = e.contains("cpu") ? 0.045 : e.contains("inactivo") ? 0.3 : 0.09
+        if nuevo != intervalo { intervalo = nuevo; arrancar() }
     }
 
-    /// Reglas de combinación: una base, un sombrero, unos ojos y los extras que no chocan.
-    private func capasPara(_ e: Set<String>) -> [String] {
-        var c = [e.contains("terminal") ? "base_matrix" : e.contains("bateria_baja") ? "base_destenida" : "base"]
-        if e.contains("microfono") { c.append("audifonos") }
-        else if e.contains("diseno") { c.append("boina") }
-        else if e.contains("noche") { c.append("gorro_noche") }
-        if e.contains("terminal") { c.append("lentes_hacker") }
-        else if e.contains("noche") { c.append("dormido") }
-        else if e.contains("bateria_baja") { c.append("cansado") }
-        if e.contains("noche") { c.append("zzz") }
-        if e.contains("musica") { c.append("notas") }
-        if e.contains("cargando") { c.append("rayo") }
-        if e.contains("cpu") { c.append("sudor") }
-        return c
+    private func estadosDeCalendario(_ fecha: Date) -> Set<String> {
+        let c = Calendar.current.dateComponents([.month, .day, .hour], from: fecha)
+        let (m, d, h) = (c.month ?? 0, c.day ?? 0, c.hour ?? 12)
+        var e = Set<String>()
+        if h < 6 { e.insert("noche") } else if h >= 7 && h < 10 { e.insert("manana") }
+        if m == 12 && (d == 24 || d == 25) { e.insert("navidad") }
+        if (m == 12 && d == 31) || (m == 1 && d == 1) { e.insert("ano_nuevo") }
+        if m == 9 && (d == 18 || d == 19) { e.insert("fiestas_patrias") }
+        if m == 10 && d == 31 { e.insert("halloween") }
+        return e
+    }
+
+    /// Moods por app al frente o, en navegadores, por el título de la ventana activa.
+    private func estadosDeApp() -> Set<String> {
+        recargarConfig()
+        guard let app = NSWorkspace.shared.frontmostApplication, let id = app.bundleIdentifier else { return [] }
+        var e = Set(config.apps.filter { config.coincide(id, $0.value) }.keys)
+        if config.coincide(id, config.navegadores) {
+            let titulo = tituloVentana(app.processIdentifier).lowercased()
+            if !titulo.isEmpty {
+                e.formUnion(config.titulos.filter { $0.value.contains { titulo.contains($0.lowercased()) } }.keys)
+            }
+        }
+        return e
+    }
+
+    private func recargarConfig() {
+        let fecha = (try? FileManager.default.attributesOfItem(atPath: rutaConfig.path))?[.modificationDate] as? Date
+        if fecha == configFecha && (fecha != nil || !config.apps.isEmpty) { return }
+        configFecha = fecha
+        let datos = fecha != nil ? (try? Data(contentsOf: rutaConfig)) : nil
+        if let datos, let c = try? JSONDecoder().decode(ConfigApps.self, from: datos) { config = c; return }
+        if let c = try? JSONDecoder().decode(ConfigApps.self, from: Data(appsPorDefecto.utf8)) { config = c }  // archivo ausente o inválido
+    }
+
+    /// Título de la ventana activa vía Accesibilidad (BTT ya tiene ese permiso); vacío si no se puede leer.
+    private func tituloVentana(_ pid: pid_t) -> String {
+        let ax = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(ax, 0.2)
+        var ventana: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(ax, kAXFocusedWindowAttribute as CFString, &ventana) == .success,
+              let ventana, CFGetTypeID(ventana) == AXUIElementGetTypeID() else { return "" }
+        var titulo: CFTypeRef?
+        AXUIElementCopyAttributeValue(ventana as! AXUIElement, kAXTitleAttribute as CFString, &titulo)
+        return titulo as? String ?? ""
     }
 
     private func microfonoEnUso() -> Bool {
@@ -150,6 +309,23 @@ class NyanCat: NSObject, BTTPluginInterface {
         dir.mSelector = kAudioDevicePropertyDeviceIsRunningSomewhere
         guard AudioObjectGetPropertyData(dev, &dir, 0, nil, &size, &corriendo) == noErr else { return false }
         return corriendo != 0
+    }
+
+    /// Alguna cámara (incluidas las virtuales) está siendo usada por alguna app.
+    private func camaraEnUso() -> Bool {
+        var dir = CMIOObjectPropertyAddress(mSelector: CMIOObjectPropertySelector(kCMIOHardwarePropertyDevices),
+                                            mScope: CMIOObjectPropertyScope(kCMIOObjectPropertyScopeGlobal),
+                                            mElement: CMIOObjectPropertyElement(kCMIOObjectPropertyElementMain))
+        let sistema = CMIOObjectID(kCMIOObjectSystemObject)
+        var size: UInt32 = 0, usado: UInt32 = 0
+        guard CMIOObjectGetPropertyDataSize(sistema, &dir, 0, nil, &size) == noErr, size > 0 else { return false }
+        var devs = [CMIOObjectID](repeating: 0, count: Int(size) / MemoryLayout<CMIOObjectID>.size)
+        guard CMIOObjectGetPropertyData(sistema, &dir, 0, nil, size, &usado, &devs) == noErr else { return false }
+        dir.mSelector = CMIOObjectPropertySelector(kCMIODevicePropertyDeviceIsRunningSomewhere)
+        return devs.contains { dev in
+            var on: UInt32 = 0
+            return CMIOObjectGetPropertyData(dev, &dir, 0, nil, UInt32(MemoryLayout<UInt32>.size), &usado, &on) == noErr && on != 0
+        }
     }
 
     private func bateria() -> (Int?, Bool) {

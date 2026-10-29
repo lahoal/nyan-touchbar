@@ -15,19 +15,41 @@ An animated Nyan Cat for the MacBook Pro Touch Bar, built as a [BetterTouchTool]
 | | State | How it's detected |
 |---|---|---|
 | ![](previews/music.gif) | **Music playing**: floating notes | BTT variable `BTTCurrentlyPlaying` |
-| ![](previews/terminal.gif) | **Terminal or code editor in front**: matrix rainbow and hacker shades | Frontmost app: Terminal, iTerm2, Warp, Ghostty, kitty, Alacritty, VS Code, Cursor, Xcode, Zed, Sublime Text, PyCharm, Claude |
-| ![](previews/design.gif) | **Design app in front**: painter's beret | Figma, Sketch, Photoshop, Illustrator, Pixelmator Pro, Affinity |
+| ![](previews/terminal.gif) | **Terminal, editor or dev tool in front**: matrix rainbow and hacker shades | `apps.json` → `terminal` (58 apps: terminals, editors, IDEs, Git and API clients, databases) |
+| ![](previews/design.gif) | **Design app in front**: painter's beret | `apps.json` → `diseno` (Figma, Sketch, Adobe, Affinity, Blender, Final Cut, DaVinci…), or a Penpot/Figma/Canva tab |
+| ![](previews/writing.gif) | **Writing or office app in front**: pencil behind the ear | `apps.json` → `escritura` (Notes, Pages, Word, Obsidian, Notion, Bear…), or a Google Docs tab |
+| ![](previews/chat.gif) | **Chat app in front**: speech bubble, typing | `apps.json` → `chat` (Slack, Discord, WhatsApp, Telegram, Signal, Messages, Teams…) |
+| ![](previews/games.gif) | **Game or launcher in front**: gamepad | `apps.json` → `juegos` (Steam, Epic, Battle.net, Minecraft launchers, emulators…) |
+| ![](previews/video.gif) | **Watching video**: popcorn | `apps.json` → `video` (TV, IINA, VLC, Infuse…), or a YouTube/Netflix/Twitch tab |
+| ![](previews/video-call.gif) | **Camera in use**: tie | Any camera, virtual ones included, running in any app (CoreMediaIO) |
 | ![](previews/microphone.gif) | **Microphone in use**: headset | Default input device running in any app (CoreAudio), so browser calls count too |
 | ![](previews/low-battery.gif) | **Battery ≤ 20 %**: faded rainbow, tired eyes | IOKit power sources |
 | ![](previews/charging.gif) | **Charging**: lightning bolt on the pop-tart | IOKit power sources |
 | ![](previews/late-night.gif) | **Midnight to 6 AM**: nightcap, closed eyes, zzz | Clock |
 | ![](previews/high-cpu.gif) | **CPU above 70 % for 3 s**: sweat drops, double-speed animation | `host_statistics` |
+| ![](previews/hot.gif) | **Mac running hot**: the frosting melts | `ProcessInfo.thermalState` serious or critical |
+| ![](previews/idle.gif) | **No keyboard or mouse for 5 min**: falls asleep, slow-motion animation | `CGEventSource` |
+| ![](previews/offline.gif) | **No network**: blinking question mark | `NWPathMonitor` |
+| ![](previews/morning.gif) | **7 to 10 AM**: steaming coffee | Clock |
+| ![](previews/halloween.gif) | **Special days**: witch hat (Oct 31), Santa hat (Dec 24–25), party hat and confetti (Dec 31–Jan 1), Chilean *chupalla* (Sep 18–19) | Calendar |
 
 Accessories stack: music with a terminal in front gives you hacker shades **and** notes.
 
 ![](previews/terminal-music.gif)
 
-When two accessories want the same spot, a fixed priority decides. On the head, the order is headset > beret > nightcap. On the eyes, it is shades > closed > tired.
+When two accessories want the same spot, a fixed priority decides (the `zonas` table in `NyanCat.swift.in`):
+
+- Head: headset > special day > beret > pencil > nightcap
+- Eyes: shades > closed (night or idle) > tired
+- In front of the face: gamepad > popcorn > coffee
+- Top left: zzz > speech bubble
+
+## Which apps trigger each mood
+
+The app lists live in `apps.json`, sorted by mood and drawn from the most installed Homebrew casks of the last year. To change them, copy the file to `~/Library/Application Support/NyanCat/apps.json` and edit it: the plugin reloads it on save, with no BTT restart. Without that file, the copy embedded in the plugin is used.
+
+- `apps`: exact bundle IDs, or a prefix ending in `*` (`com.jetbrains.*`). Find one with `osascript -e 'id of app "Name"'`.
+- `navegadores` and `titulos`: when a browser is in front, the title of its active window is matched against these words (case-insensitive). This is how a Penpot or YouTube tab counts. It uses BTT's Accessibility permission.
 
 ## Install
 
@@ -53,7 +75,7 @@ Set it back to empty to return to automatic detection:
 osascript -e 'tell application "BetterTouchTool" to set_string_variable "nyan_forzar" to ""'
 ```
 
-State names (in Spanish, as in the code): `musica`, `terminal`, `diseno`, `microfono`, `bateria_baja`, `cargando`, `noche`, `cpu`. Any other value (`normal`, for example) shows the plain cat.
+State names (in Spanish, as in the code): `musica`, `terminal`, `diseno`, `escritura`, `chat`, `juegos`, `video`, `microfono`, `videollamada`, `bateria_baja`, `cargando`, `noche`, `manana`, `inactivo`, `cpu`, `caliente`, `sin_red`, `halloween`, `navidad`, `ano_nuevo`, `fiestas_patrias`. Any other value (`normal`, for example) shows the plain cat.
 
 ## Hacking on it
 
@@ -63,7 +85,7 @@ The sprites are drawn in code by `generar.py` (Python 3 + Pillow). Each sprite s
 python3 generar.py
 ```
 
-The app lists and the stacking rules live in `NyanCat.swift.in` (`apps` and `capasPara`). The comments in the code are in Spanish.
+The stacking rules live in `NyanCat.swift.in` (`zonas`); the app lists in `apps.json`, which `generar.py` validates and embeds. The comments in the code are in Spanish.
 
 ## Performance
 

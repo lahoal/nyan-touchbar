@@ -7,20 +7,42 @@
 // ARCHIVO GENERADO por generar.py (editar NyanCat.swift.in, no este).
 import Cocoa
 import CoreAudio
+import CoreMediaIO
 import IOKit.ps
+import Network
 
 // Tiras de 12 cuadros (138x60 px c/u), PNG en base64.
 private let sprites: [String: String] = [
 /*SPRITES*/
 ]
 
-private let apps: [String: Set<String>] = [
-    "terminal": ["com.apple.Terminal", "com.googlecode.iterm2", "dev.warp.Warp-Stable", "com.mitchellh.ghostty",
-                 "net.kovidgoyal.kitty", "io.alacritty", "com.microsoft.VSCode", "com.apple.dt.Xcode",
-                 "com.todesktop.230313mzl4w4u92", "dev.zed.Zed", "com.sublimetext.4", "com.jetbrains.pycharm",
-                 "com.anthropic.claudefordesktop"],
-    "diseno": ["com.figma.Desktop", "com.bohemiancoding.sketch3", "com.adobe.Photoshop", "com.adobe.illustrator",
-               "com.pixelmatorteam.pixelmator.x", "com.seriflabs.affinitydesigner2", "com.seriflabs.affinityphoto2"],
+// Copia de apps.json embebida; se usa si no existe ~/Library/Application Support/NyanCat/apps.json.
+private let appsPorDefecto = #"""
+/*APPS*/
+"""#
+
+private struct ConfigApps: Decodable {
+    var apps: [String: [String]] = [:]
+    var navegadores: [String] = []
+    var titulos: [String: [String]] = [:]
+
+    func coincide(_ id: String, _ patrones: [String]) -> Bool {
+        patrones.contains { $0.hasSuffix("*") ? id.hasPrefix($0.dropLast()) : $0 == id }
+    }
+}
+
+/// Por zona del dibujo, la primera regla cuyo estado esté activo gana; así dos accesorios nunca se pisan.
+private let zonas: [[(estados: [String], capa: String)]] = [
+    [(["terminal"], "base_matrix"), (["bateria_baja"], "base_destenida"), ([], "base")],
+    [(["microfono"], "audifonos"), (["halloween"], "sombrero_bruja"), (["navidad"], "gorro_navidad"),
+     (["fiestas_patrias"], "chupalla"), (["ano_nuevo"], "gorro_fiesta"), (["diseno"], "boina"),
+     (["escritura"], "lapiz"), (["noche"], "gorro_noche")],                                     // cabeza
+    [(["terminal"], "lentes_hacker"), (["noche", "inactivo"], "dormido"), (["bateria_baja"], "cansado")],  // ojos
+    [(["videollamada"], "corbata")],                                                            // cuello
+    [(["juegos"], "control"), (["video"], "palomitas"), (["manana"], "cafe")],                  // frente
+    [(["noche", "inactivo"], "zzz"), (["chat"], "globo")],                                      // arriba a la izquierda
+    [(["musica"], "notas")], [(["cargando"], "rayo")], [(["sin_red"], "sin_red")],
+    [(["cpu"], "sudor")], [(["caliente"], "derretido")],
 ]
 
 class NyanCat: NSObject, BTTPluginInterface {
@@ -30,11 +52,17 @@ class NyanCat: NSObject, BTTPluginInterface {
     private var capas: [String: CALayer] = [:]
     private var activas: [String] = ["base"]
     private var cuadro = 0
-    private var tick = 0
-    private var rapido = false
+    private var intervalo = 0.09
     private var timer: Timer?
+    private var timerEstado: Timer?
     private var cpuPrevio: (uso: UInt64, total: UInt64)?
     private var cpuAltaSeg = 0
+    private var config = ConfigApps()
+    private var configFecha: Date?
+    private let rutaConfig = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Application Support/NyanCat/apps.json")
+    private let red = NWPathMonitor()
+    private var hayRed = true
 
     private lazy var viewController: NSViewController = {
         let vc = NSViewController()
@@ -58,12 +86,16 @@ class NyanCat: NSObject, BTTPluginInterface {
             v.layer?.addSublayer(capa)
             capas[nombre] = capa
         }
+        red.pathUpdateHandler = { [weak self] p in DispatchQueue.main.async { self?.hayRed = p.status == .satisfied } }
+        red.start(queue: .global(qos: .utility))
         actualizarEstado()
         arrancar()
+        timerEstado = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.actualizarEstado() }
+        RunLoop.main.add(timerEstado!, forMode: .common)
         return vc
     }()
 
-    deinit { timer?.invalidate() }
+    deinit { timer?.invalidate(); timerEstado?.invalidate(); red.cancel() }
 
     static func configurationFormItems() -> BTTPluginFormItem? { nil }
 
@@ -73,14 +105,12 @@ class NyanCat: NSObject, BTTPluginInterface {
 
     private func arrancar() {
         timer?.invalidate()
-        timer = Timer(timeInterval: rapido ? 0.045 : 0.09, repeats: true) { [weak self] _ in self?.avanzar() }
+        timer = Timer(timeInterval: intervalo, repeats: true) { [weak self] _ in self?.avanzar() }
         RunLoop.main.add(timer!, forMode: .common)
     }
 
     private func avanzar() {
         cuadro = (cuadro + 1) % 12
-        tick += 1
-        if tick % 11 == 0 { actualizarEstado() }  // ~1 s
         CATransaction.begin(); CATransaction.setDisableActions(true)
         for (nombre, capa) in capas {
             let on = activas.contains(nombre)
@@ -99,32 +129,68 @@ class NyanCat: NSObject, BTTPluginInterface {
             e = Set(forzado.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
         } else {
             if let v = delegate?.getVariable("BTTCurrentlyPlaying"), "\(v)" == "1" || "\(v)" == "1.0" { e.insert("musica") }
-            let app = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
-            for (cat, ids) in apps where ids.contains(app) { e.insert(cat) }
+            e.formUnion(estadosDeApp())
             if microfonoEnUso() { e.insert("microfono") }
+            if camaraEnUso() { e.insert("videollamada") }
             let (pct, cargando) = bateria()
             if cargando { e.insert("cargando") } else if let pct, pct <= 20 { e.insert("bateria_baja") }
-            if Calendar.current.component(.hour, from: Date()) < 6 { e.insert("noche") }
             if cpuAlta() { e.insert("cpu") }
+            if !hayRed { e.insert("sin_red") }
+            if ProcessInfo.processInfo.thermalState.rawValue >= ProcessInfo.ThermalState.serious.rawValue { e.insert("caliente") }
+            let inputCualquiera = CGEventType(rawValue: ~0)!
+            if CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: inputCualquiera) > 300 { e.insert("inactivo") }
+            e.formUnion(estadosDeCalendario(Date()))
         }
-        activas = capasPara(e)
-        if e.contains("cpu") != rapido { rapido = e.contains("cpu"); arrancar() }
+        activas = zonas.compactMap { reglas in reglas.first { $0.estados.isEmpty || !e.isDisjoint(with: $0.estados) }?.capa }
+        let nuevo = e.contains("cpu") ? 0.045 : e.contains("inactivo") ? 0.3 : 0.09
+        if nuevo != intervalo { intervalo = nuevo; arrancar() }
     }
 
-    /// Reglas de combinación: una base, un sombrero, unos ojos y los extras que no chocan.
-    private func capasPara(_ e: Set<String>) -> [String] {
-        var c = [e.contains("terminal") ? "base_matrix" : e.contains("bateria_baja") ? "base_destenida" : "base"]
-        if e.contains("microfono") { c.append("audifonos") }
-        else if e.contains("diseno") { c.append("boina") }
-        else if e.contains("noche") { c.append("gorro_noche") }
-        if e.contains("terminal") { c.append("lentes_hacker") }
-        else if e.contains("noche") { c.append("dormido") }
-        else if e.contains("bateria_baja") { c.append("cansado") }
-        if e.contains("noche") { c.append("zzz") }
-        if e.contains("musica") { c.append("notas") }
-        if e.contains("cargando") { c.append("rayo") }
-        if e.contains("cpu") { c.append("sudor") }
-        return c
+    private func estadosDeCalendario(_ fecha: Date) -> Set<String> {
+        let c = Calendar.current.dateComponents([.month, .day, .hour], from: fecha)
+        let (m, d, h) = (c.month ?? 0, c.day ?? 0, c.hour ?? 12)
+        var e = Set<String>()
+        if h < 6 { e.insert("noche") } else if h >= 7 && h < 10 { e.insert("manana") }
+        if m == 12 && (d == 24 || d == 25) { e.insert("navidad") }
+        if (m == 12 && d == 31) || (m == 1 && d == 1) { e.insert("ano_nuevo") }
+        if m == 9 && (d == 18 || d == 19) { e.insert("fiestas_patrias") }
+        if m == 10 && d == 31 { e.insert("halloween") }
+        return e
+    }
+
+    /// Moods por app al frente o, en navegadores, por el título de la ventana activa.
+    private func estadosDeApp() -> Set<String> {
+        recargarConfig()
+        guard let app = NSWorkspace.shared.frontmostApplication, let id = app.bundleIdentifier else { return [] }
+        var e = Set(config.apps.filter { config.coincide(id, $0.value) }.keys)
+        if config.coincide(id, config.navegadores) {
+            let titulo = tituloVentana(app.processIdentifier).lowercased()
+            if !titulo.isEmpty {
+                e.formUnion(config.titulos.filter { $0.value.contains { titulo.contains($0.lowercased()) } }.keys)
+            }
+        }
+        return e
+    }
+
+    private func recargarConfig() {
+        let fecha = (try? FileManager.default.attributesOfItem(atPath: rutaConfig.path))?[.modificationDate] as? Date
+        if fecha == configFecha && (fecha != nil || !config.apps.isEmpty) { return }
+        configFecha = fecha
+        let datos = fecha != nil ? (try? Data(contentsOf: rutaConfig)) : nil
+        if let datos, let c = try? JSONDecoder().decode(ConfigApps.self, from: datos) { config = c; return }
+        if let c = try? JSONDecoder().decode(ConfigApps.self, from: Data(appsPorDefecto.utf8)) { config = c }  // archivo ausente o inválido
+    }
+
+    /// Título de la ventana activa vía Accesibilidad (BTT ya tiene ese permiso); vacío si no se puede leer.
+    private func tituloVentana(_ pid: pid_t) -> String {
+        let ax = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(ax, 0.2)
+        var ventana: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(ax, kAXFocusedWindowAttribute as CFString, &ventana) == .success,
+              let ventana, CFGetTypeID(ventana) == AXUIElementGetTypeID() else { return "" }
+        var titulo: CFTypeRef?
+        AXUIElementCopyAttributeValue(ventana as! AXUIElement, kAXTitleAttribute as CFString, &titulo)
+        return titulo as? String ?? ""
     }
 
     private func microfonoEnUso() -> Bool {
@@ -138,6 +204,23 @@ class NyanCat: NSObject, BTTPluginInterface {
         dir.mSelector = kAudioDevicePropertyDeviceIsRunningSomewhere
         guard AudioObjectGetPropertyData(dev, &dir, 0, nil, &size, &corriendo) == noErr else { return false }
         return corriendo != 0
+    }
+
+    /// Alguna cámara (incluidas las virtuales) está siendo usada por alguna app.
+    private func camaraEnUso() -> Bool {
+        var dir = CMIOObjectPropertyAddress(mSelector: CMIOObjectPropertySelector(kCMIOHardwarePropertyDevices),
+                                            mScope: CMIOObjectPropertyScope(kCMIOObjectPropertyScopeGlobal),
+                                            mElement: CMIOObjectPropertyElement(kCMIOObjectPropertyElementMain))
+        let sistema = CMIOObjectID(kCMIOObjectSystemObject)
+        var size: UInt32 = 0, usado: UInt32 = 0
+        guard CMIOObjectGetPropertyDataSize(sistema, &dir, 0, nil, &size) == noErr, size > 0 else { return false }
+        var devs = [CMIOObjectID](repeating: 0, count: Int(size) / MemoryLayout<CMIOObjectID>.size)
+        guard CMIOObjectGetPropertyData(sistema, &dir, 0, nil, size, &usado, &devs) == noErr else { return false }
+        dir.mSelector = CMIOObjectPropertySelector(kCMIODevicePropertyDeviceIsRunningSomewhere)
+        return devs.contains { dev in
+            var on: UInt32 = 0
+            return CMIOObjectGetPropertyData(dev, &dir, 0, nil, UInt32(MemoryLayout<UInt32>.size), &usado, &on) == noErr && on != 0
+        }
     }
 
     private func bateria() -> (Int?, Bool) {
