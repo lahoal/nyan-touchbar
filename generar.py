@@ -485,6 +485,17 @@ def compuesto(nombres, i):
     return im.resize((W * S, H * S), Image.NEAREST)
 
 
+def widget(i, capas, panel_capas):
+    """El widget completo, como en la Touch Bar: gato a la izquierda y panel con el botón a la derecha."""
+    im = Image.new("RGBA", (W + PW, H))
+    im.paste(compuesto(capas, i).resize((W, H), Image.NEAREST), (0, 0))
+    e = capas[0][5:] or "base"  # base_matrix → matrix
+    for c in ["cielo"] + panel_capas:
+        c = c if c == "rafaga" else f"{c}_{e}"
+        im.alpha_composite(CAPAS[c](i), (W if c != "rafaga" else 0, 0))
+    return im.resize(((W + PW) * S, H * S), Image.NEAREST)
+
+
 VISTAS = {  # lo que el plugin muestra en cada estado (ver NyanCat.swift.in, capasPara)
     "normal": ["base"], "music": ["base", "notas"], "terminal": ["base_matrix", "lentes_hacker"],
     "design": ["base", "boina"], "microphone": ["base", "audifonos"],
@@ -515,32 +526,25 @@ if __name__ == "__main__":
         ancho = W + PW if n == "rafaga" else PW if n.startswith(("cielo_", "panel_", "toque_", "desliza_")) else W
         assert t.size == (ancho * S * N, H * S), n
     # vistas para el README: GIF por estado y una lámina con todos
-    A, B = W * S * 2, H * S * 2  # vistas al doble, para que se lean en GitHub
+    A, B = (W + PW) * S * 2, H * S * 2  # vistas al doble, para que se lean en GitHub
     lam = Image.new("RGBA", (A * 2 + 40, (B + 44) * ((len(VISTAS) + 1) // 2)), (24, 24, 24, 255))
     fuente = ImageFont.truetype("/System/Library/Fonts/SFNS.ttf", 22) if os.path.exists("/System/Library/Fonts/SFNS.ttf") else None
     d = ImageDraw.Draw(lam)
     for k, (nombre, capas) in enumerate(VISTAS.items()):
-        fr = [compuesto(capas, i).convert("RGB").resize((W * S * 2, H * S * 2), Image.NEAREST) for i in range(N)]
+        panel = ["panel_pausa"] if "notas" in capas else ["panel_apagado"]  # con música hay reproductor
+        fr = [widget(i, capas, panel).convert("RGB").resize((A, B), Image.NEAREST) for i in range(N)]
         fr[0].save(os.path.join(HERE, "previews", nombre + ".gif"), save_all=True, append_images=fr[1:], duration=90, loop=0)
         x, y = (k % 2) * (A + 40), (k // 2) * (B + 44)
         lam.paste(fr[3], (x, y)); d.text((x, y + B + 8), nombre, fill=(230, 230, 230), font=fuente)
     lam.save(os.path.join(HERE, "previews", "all-variants.png"))
     # widget completo: sin reproductor → empieza la música (ráfaga) → toque en siguiente → pausa
-    def widget(i, capas, panel_capas):
-        im = Image.new("RGBA", (W + PW, H))
-        im.paste(compuesto(capas, i).resize((W, H), Image.NEAREST), (0, 0))
-        e = capas[0][5:] or "base"  # base_matrix → matrix
-        for c in ["cielo"] + panel_capas:
-            c = c if c == "rafaga" else f"{c}_{e}"
-            im.alpha_composite(CAPAS[c](i), (W if c != "rafaga" else 0, 0))
-        return im
     seq = [widget(i, ["base"], ["panel_apagado"]) for i in range(N)]
     seq += [widget(i, ["base", "notas"] if i >= 8 else ["base"], ["panel_apagado", "rafaga"]) for i in range(N)]
     # las animaciones usan los cuadros 4 a 11 de su tira, igual que en el plugin
     seq += [widget(i, ["base", "notas"], ["panel_pausa"] + (["desliza_siguiente"] if i >= 4 else [])) for i in range(N)]
     seq += [widget(i, ["base", "notas"], ["panel_pausa"] + (["desliza_anterior"] if i >= 4 else [])) for i in range(N)]
     seq += [widget(i, ["base"], ["panel_play"] + (["toque_a_play"] if i >= 4 else [])) for i in range(N)]
-    seq = [f.convert("RGB").resize(((W + PW) * S * 2, H * S * 2), Image.NEAREST) for f in seq]
+    seq = [f.convert("RGB").resize((A, B), Image.NEAREST) for f in seq]
     seq[0].save(os.path.join(HERE, "previews", "media.gif"), save_all=True, append_images=seq[1:], duration=90, loop=0)
     # NyanCat.swift = plantilla + sprites embebidos
     datos = ",\n".join(f'    "{n}": "{base64.b64encode(png(t)).decode()}"' for n, t in tiras.items())
