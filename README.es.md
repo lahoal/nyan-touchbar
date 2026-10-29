@@ -8,7 +8,7 @@ Un Nyan Cat animado para la Touch Bar de la MacBook Pro, hecho como plugin de [B
 
 *Grabado en una Touch Bar real. Así se ve la barra completa (el nombre del evento del calendario se reemplazó por privacidad):*
 
-![Touch Bar completa con el gato a la izquierda](previews/touchbar-real.png)
+![Touch Bar completa con el gato y su botón de media a la izquierda](previews/touchbar-real.png)
 
 Novedades de cada versión: [CHANGELOG.md](CHANGELOG.md) (en inglés).
 

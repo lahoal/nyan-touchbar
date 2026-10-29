@@ -8,7 +8,7 @@ An animated Nyan Cat for the MacBook Pro Touch Bar, built as a [BetterTouchTool]
 
 *Recorded on a real Touch Bar. The full bar looks like this (the calendar event name was replaced for privacy):*
 
-![Full Touch Bar with the cat on the left](previews/touchbar-real.png)
+![Full Touch Bar with the cat and its media button on the left](previews/touchbar-real.png)
 
 What's new in each version: [CHANGELOG.md](CHANGELOG.md).
 
