@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## v1.2.0 — 2026-10-29
+
+A media button that lives next to the cat, and a clearer note on the one Chile-only mood.
+
+![](previews/media.gif)
 
 ### Media button
 
@@ -12,6 +16,18 @@
 - It sends the system media keys (like F7–F9), so it controls whatever macOS considers "now playing".
 - Mood changes now play a burst of rainbow pixels that crosses the panel into the cat.
 - `nyan_forzar` accepts `reproductor` to preview the lit button while paused.
+
+### About the Chile-only mood
+
+- From September 18 to 19 the cat wears a *chupalla*. Those are Chile's *Fiestas Patrias* (national holidays: Independence Day and the Day of the Army's Glories), and the chupalla is the woven straw hat of the *huaso*, the Chilean countryman, worn at the *fondas* and *cueca* dances those days.
+- It's the only mood tied to one country. The plugin reads your Mac's local date, so it shows up on those days wherever you are. If you'd rather not see it, triple-tap the cat and it stays hidden until next year.
+- The other special days (Halloween, Christmas on Dec 24–25 and New Year's Eve/Day) and the morning coffee (7–10 AM) also follow your Mac's local date and time.
+
+### Upgrading from v1.1.0
+
+1. Replace `~/Library/Application Support/BetterTouchTool/Plugins/NyanCat.swift` with the one from this release and confirm the compile prompt.
+2. Restart BTT (hot reload doesn't replace widgets that already exist).
+3. If your preset already shows its own previous / play / next buttons, hide them: the cat's button does the same job in less space.
 
 ## v1.1.0 — 2026-10-29
 
@@ -31,7 +47,7 @@
 | ![](previews/halloween.gif) | Witch hat | October 31 |
 | ![](previews/christmas.gif) | Santa hat | December 24–25 |
 | ![](previews/new-year.gif) | Party hat and confetti | December 31 – January 1 |
-| ![](previews/fiestas-patrias.gif) | Chilean *chupalla* | September 18–19 |
+| ![](previews/fiestas-patrias.gif) | Chilean *chupalla*, the huaso's straw hat | September 18–19, Chile's *Fiestas Patrias* (see the note in v1.2.0) |
 
 ### Triple tap to hide a mood
 

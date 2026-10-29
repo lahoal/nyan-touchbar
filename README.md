@@ -33,7 +33,9 @@ What's new in each version: [CHANGELOG.md](CHANGELOG.md).
 | ![](previews/idle.gif) | **No keyboard or mouse for 5 min**: falls asleep, slow-motion animation | `CGEventSource` |
 | ![](previews/offline.gif) | **No network**: blinking question mark | `NWPathMonitor` |
 | ![](previews/morning.gif) | **7 to 10 AM**: steaming coffee | Clock |
-| ![](previews/halloween.gif) | **Special days**: witch hat (Oct 31), Santa hat (Dec 24–25), party hat and confetti (Dec 31–Jan 1), Chilean *chupalla* (Sep 18–19) | Calendar |
+| ![](previews/halloween.gif) | **Special days**: witch hat (Oct 31), Santa hat (Dec 24–25), party hat and confetti (Dec 31–Jan 1), Chilean *chupalla* (Sep 18–19)¹ | Calendar |
+
+¹ September 18–19 are Chile's *Fiestas Patrias* (national holidays). The *chupalla* is the woven straw hat of the *huaso*, the Chilean countryman. It's the only country-specific mood: it follows your Mac's local date, so it shows up on those days wherever you are. Triple-tap the cat to hide it until next year.
 
 Accessories stack: music with a terminal in front gives you hacker shades **and** notes.
 

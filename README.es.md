@@ -33,7 +33,9 @@ Novedades de cada versión: [CHANGELOG.md](CHANGELOG.md) (en inglés).
 | ![](previews/idle.gif) | **5 min sin teclado ni mouse**: se duerme y anda en cámara lenta | `CGEventSource` |
 | ![](previews/offline.gif) | **Sin red**: signo de pregunta que parpadea | `NWPathMonitor` |
 | ![](previews/morning.gif) | **De 7:00 a 10:00**: café humeante | Reloj |
-| ![](previews/halloween.gif) | **Fechas especiales**: sombrero de bruja (31 oct), gorro navideño (24 y 25 dic), gorro de fiesta y confeti (31 dic y 1 ene), chupalla (18 y 19 sep) | Calendario |
+| ![](previews/halloween.gif) | **Fechas especiales**: sombrero de bruja (31 oct), gorro navideño (24 y 25 dic), gorro de fiesta y confeti (31 dic y 1 ene), chupalla (18 y 19 sep)¹ | Calendario |
+
+¹ El 18 y 19 de septiembre son las Fiestas Patrias de Chile, y la chupalla es el sombrero de paja del huaso. Es el único mood propio de un país: sigue la fecha local del Mac, así que aparece esos días estés donde estés. Con un triple toque al gato se oculta hasta el próximo año.
 
 Los accesorios se combinan: con música y la terminal al frente, el gato sale con lentes de hacker **y** notas.
 
