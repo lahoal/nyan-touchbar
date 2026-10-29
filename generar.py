@@ -297,6 +297,25 @@ def derretido(i):
     return im
 
 
+
+def destello(i):
+    """Confirmación del triple toque: chispas que salen desde la cabeza y se apagan."""
+    im, r = lienzo()
+    _, hb, hx = pose(i)
+    cx, cy = hx + 6, 10 + hb
+    if i >= 10:
+        return im
+    for n, (dx, dy) in enumerate(((-1, -1), (1, -1), (-1, 1), (1, 1), (0, -1), (-1, 0), (1, 0), (0, 1))):
+        d = (3 if n < 4 else 4) + i
+        x, y = cx + dx * d * 2, cy + dy * d  # el doble en horizontal: la barra es ancha
+        col = YEL if (n + i) % 2 else WHT
+        if 0 <= x < W and 0 <= y < H:
+            r(x, y, x, y, col)
+            if i < 5:
+                r(x - 1, y, x + 1, y, col); r(x, y - 1, x, y + 1, col)
+    return im
+
+
 CAPAS = {
     "base": lambda i: base(i),
     "base_matrix": lambda i: base(i, MATRIX, (0, 12, 0), (0, 200, 50)),
@@ -306,7 +325,7 @@ CAPAS = {
     "cansado": lambda i: ojos(i, "cansado"), "zzz": zzz, "rayo": rayo, "sudor": sudor,
     "lapiz": lapiz, "gorro_navidad": gorro_navidad, "chupalla": chupalla, "sombrero_bruja": sombrero_bruja,
     "gorro_fiesta": gorro_fiesta, "corbata": corbata, "control": control, "palomitas": palomitas, "cafe": cafe,
-    "globo": globo, "sin_red": sin_red, "derretido": derretido,
+    "globo": globo, "sin_red": sin_red, "derretido": derretido, "destello": destello,
 }
 
 
@@ -339,6 +358,7 @@ VISTAS = {  # lo que el plugin muestra en cada estado (ver NyanCat.swift.in, cap
     "morning": ["base", "cafe"], "offline": ["base", "sin_red"], "hot": ["base", "derretido"],
     "christmas": ["base", "gorro_navidad"], "fiestas-patrias": ["base", "chupalla"],
     "halloween": ["base", "sombrero_bruja"], "new-year": ["base", "gorro_fiesta"],
+    "dismiss": ["base", "destello"],
 }
 
 def validar_apps(cfg, plantilla):

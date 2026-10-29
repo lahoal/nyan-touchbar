@@ -8,6 +8,7 @@
 import Cocoa
 import CoreAudio
 import CoreMediaIO
+import IOKit
 import IOKit.ps
 import Network
 
@@ -37,7 +38,8 @@ private let sprites: [String: String] = [
     "cafe": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAAC2UlEQVR42u3csW3CUBRA0esoc6RiCApmyi7MlIYhaDLJp0KiQFgoWIrxOVWaNHBlPWS9VwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACvMfkIAAAAWIvT6Tyuf+/3O79pAQAzCZvt5MNHDAAAAAAAsC5e8AAAAAAAAOREG1kPBDxP0AloA50Ani0AANngAQAAAAAAIC94AAAAAAAAcqINyMkCAAAwuwKeM+gEPaCThTuxwQMAAAAAAJATbQAAAAAAAOREG1kJBDxn0AnaQCcAniEAANngAQAAAAAAyAseAAAAAAAAcqINyMkCAADMseZYwHMGnaANdJINHgAAAAAAgJxoAwAAAAAAICfayEog4HmCTtAJOgHwDAEAyAYPAAAAAABAXvAAAAAAAACQE23MG2OMp77safJ9k/MFAJhP0Ak6AfC7GJ1gPmH9ndjgAQAAAAAAyIk2AAAAAAAAcqKNO74PX7OrXsefX+uBWQm0Oopm0AnmE3SCTjCTaAPNoBPMJ7xXJzZ4AAAAAAAAcqINAAAAAACAnGij166L3v6v9cCsBFodRTPoBPMJOkEnmEnQjGbQCeYTVtWJDR4AAAAAAICcaAMAAAAAACAn2ujvq17WRXVidRTNoBPMJ+gEnWAmMZNoRjPoBPMJ79GJDR4AAAAAAICcaAMAAAAAAGBBnz6C7bAGSE+uEGoGzaATzCfoBJ1gJkEzmkEnmE/4n53Y4AEAAAAAAMiJNgAAAAAAABZkRQzazpqw1VE0g04AADMJmtEMOgGywQMAAAAAAEBe8AAAAAAAAPDYBXpfmGfEab+bAAAAAElFTkSuQmCC",
     "globo": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACR0lEQVR42u3cMQrCUBBF0ffEJbkn1+Se3NPYWSnY/JjoOVUggcDnNmGYNG/MzGShtg2HpxN0gk7QCTpBJzrRiU50ohN0gk7QCds7OQIAAAAAAIAY8AAAAAAAALBOt1zvsvYVa4A60YlO0Ak6QSfoBJ3oRCc60YlO0Ak6ITZ4AAAAAAAAYsADAAAAAADAjp0/eaiX6/N67jenhk7QCV/pRD/oBJ2wh070oxOdoBN8F6MTdEJs8AAAAAAAABADHgAAAAAAgN/WdzdmZpa+uK3jPz6doBN0gk7QCTrRiU50ohOdoBN0gk6IDR4AAAAAAABiwAMAAAAAAJB/+EVbFq+PWfVCJ+gEnaATdIJO0AnoBJ2gE3RCbPAAAAAAAADEgAcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAlx5iN/8dOugdDAAAAABJRU5ErkJggg==",
     "sin_red": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAACJ0lEQVR42u3cQQrCQBBE0T/B+1+5vUACio4BeW/tKtaih6a6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeMPyCQAA4F4zM6fD+lrmdQAAwHuHU4dPAAAAAAAAkAUPAAAAAAAAOdEGAKkYIyf8aTau8vDKbwAAzLHICd47afAAAAAAAACQBQ8AAAAAAADf9fAJACAVY+SEn/O/AwDmWOQE7x3S4AEAAAAAAMiCBwAAAAAAgJxoA4BUjJET6NOTFwAA5ljkBO8dNHgAAAAAAACy4AEAAAAAAGAjFSgASMUYOUE2AADMKsgJspEGDwAAAAAAAFnwAAAAAAAAkBNtAJCKMXICAADmWOQE0uABAAAAAAAgCx4AAAAAAAByog0AAHLaAgAAwHsnDR4AAAAAAACy4AEAAAAAACAn2gAgFWPkBAAAzLHICaTBAwAAAAAAQBY8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOzwBmAOQRxg7xBYAAAAASUVORK5CYII=",
-    "derretido": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAAB/0lEQVR42u3cQQqEMBAAwY74V9/ka+PND4SASNV9WTR9GAhjAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB8y/jTw8x7zvfBrjF2/nblv9AJAID5BJ2gEwDAfGI+WXHICwAAAAAAIBc8AAAAAAAA7HN6BQBZHUUn6AQAMJ+YT9AJOoFs8AAAAAAAAJALHgAAAAAAAKqffaLNah46AQAwCzk7dAIAYBbKBg8AAAAAAAC54AEAAAAAACCfaMuqFzrBuaMTdKUr5w66Qic4d3SCrnDu2eABAAAAAAAgFzwAAAAAAAAsewCVJZeScfGF2gAAAABJRU5ErkJggg=="
+    "derretido": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAAB/0lEQVR42u3cQQqEMBAAwY74V9/ka+PND4SASNV9WTR9GAhjAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB8y/jTw8x7zvfBrjF2/nblv9AJAID5BJ2gEwDAfGI+WXHICwAAAAAAIBc8AAAAAAAA7HN6BQBZHUUn6AQAMJ+YT9AJOoFs8AAAAAAAAJALHgAAAAAAAKqffaLNah46AQAwCzk7dAIAYBbKBg8AAAAAAAC54AEAAAAAACCfaMuqFzrBuaMTdKUr5w66Qic4d3SCrnDu2eABAAAAAAAgFzwAAAAAAAAsewCVJZeScfGF2gAAAABJRU5ErkJggg==",
+    "destello": "iVBORw0KGgoAAAANSUhEUgAABngAAAA8CAYAAABFGLTrAAADs0lEQVR42u3cQY6cMBRAwUeOkfufba7RWY3CYliMaIzdVK2ySQK0jZCs/7YAAADgl16v1+v7z9u2bZ4IP66Tr/6vk79ZJ/YUAPBGfzwCAAAAAACAHPAAAAAAAABwHSO/AADJv4Ckkn2H/QUAQCZ4AAAAAAAAyAEPAAAAAAAASbQBAPSABNP+2g4/Cme75sUTRhJM9iMAAEAmeAAAAAAAAMgBDwAAAAAAQBJtAEDyUA/OQC2TPps5Jbdbt4fP03oGAACAygQPAAAAAABADngAAAAAAABIog2AVsgrSaLdm5CaOW/1hHVrb8oMAgAAQCZ4AAAAAAAAyAEPAAAAAABAEm0k1YIEjT0+ZI/v/6/DF/rV12CtrpVEmyEZN8G6BQAAAMgEDwAAAAAAADngAQAAAAAAIIm2bs0uXZGjkUX6vITayKyTVOAHptJGpuEmTpDJLUoaAgAAAGSCBwAAAAAAgBzwAAAAAAAAkERbS2WXTqXeZJGmSS1dnlC7IgE3QUZMckqCDAAAAADIBA8AAAAAAAA54AEAAAAAAEiiLdklWSRZKusZAAAAAIBM8AAAAAAAAJADHgAAAAAAgCTakt6S3gIA3w/4/gEAAIBM8AAAAAAAAJADHgAAAAAAgCTaWjSrcvhQJs6t7LMkh9cvVyL5IjHkWdk77tf+8v3woftutm8e7wR8MwAAAJngAQAAAAAAIAc8AAAAAAAASbQloSAT9IDky6cm7ySGPCt7x/3aX74fZBIBvK/wLYF3BQCZ4AEAAAAAACAHPAAAAAAAACTR1uLjsca3jUVbV56VveN+7S8AAAAAMsEDAAAAAACQAx4AAAAAAACSaOum5M7hw/pliudMdmb/dw+vR8oGAAAAAAAywQMAAAAAAEAOeAAAAAAAAEiirXG5tjNZtnel1c6k3njDelj8+Z9ZzwAAAAAAZIIHAAAAAACAHPAAAAAAAAAk0UbSXn67C1J7IxNq+3/z8Prl2uTvvNMAAAAAIBM8AAAAAAAA5IAHAAAAAACAJNqg+7NUIxNqT8uIjcyy3ZW/G5lKG5kr9K6QNHSP2FMAAACQCR4AAAAAAIAc8AAAAAAAAJBEGyDp47dbJZUml7RWwm6Gd8sMSUP3uNZeloUEAACATPAAAAAAAADkgAcAAAAAAIAk2gBIKs3v8oBc2BNylDPf44rps9Xfdd7V9iMAAEAmeAAAAAAAAMgBDwAAAAAAQBJtAEDyREiH4R2C5wkAAGSCBwAAAAAAgBzwAAAAAAAALO4fEA/hdD48M9oAAAAASUVORK5CYII="
 ]
 
 // Copia de apps.json embebida; se usa si no existe ~/Library/Application Support/NyanCat/apps.json.
@@ -150,6 +152,9 @@ private let zonas: [[(estados: [String], capa: String)]] = [
     [(["cpu"], "sudor")], [(["caliente"], "derretido")],
 ]
 
+/// Moods que el triple toque oculta hasta su próxima ocurrencia (ver `ocurrencia`).
+private let descartables: Set<String> = ["manana", "video", "chat", "halloween", "navidad", "ano_nuevo", "fiestas_patrias"]
+
 class NyanCat: NSObject, BTTPluginInterface {
     weak var delegate: (any BTTTouchBarPluginDelegate)?
 
@@ -168,6 +173,14 @@ class NyanCat: NSObject, BTTPluginInterface {
         .appendingPathComponent("Library/Application Support/NyanCat/apps.json")
     private let red = NWPathMonitor()
     private var hayRed = true
+    private var estado = Set<String>()
+    private var descartados: [String: String] = [:]  // mood → ocurrencia descartada
+    private var descartesFecha: Date?
+    private var rutaDescartes = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Application Support/NyanCat/descartados.json")
+    private var toques: [Date] = []
+    private var destelloCuadros = 0
+    private lazy var vibrador = Vibrador()
 
     private lazy var viewController: NSViewController = {
         let vc = NSViewController()
@@ -177,6 +190,9 @@ class NyanCat: NSObject, BTTPluginInterface {
         v.widthAnchor.constraint(equalToConstant: 69).isActive = true
         v.heightAnchor.constraint(equalToConstant: 30).isActive = true
         vc.view = v
+        let toque = NSClickGestureRecognizer(target: self, action: #selector(tocado))
+        toque.allowedTouchTypes = [.direct]
+        v.addGestureRecognizer(toque)
         for (nombre, b64) in sprites.sorted(by: { $0.key < $1.key }) {
             guard let data = Data(base64Encoded: b64), let src = CGImageSourceCreateWithData(data as CFData, nil),
                   let tira = CGImageSourceCreateImageAtIndex(src, 0, nil) else { continue }
@@ -218,11 +234,30 @@ class NyanCat: NSObject, BTTPluginInterface {
         cuadro = (cuadro + 1) % 12
         CATransaction.begin(); CATransaction.setDisableActions(true)
         for (nombre, capa) in capas {
-            let on = activas.contains(nombre)
+            let destello = nombre == "destello" && destelloCuadros > 0
+            let on = activas.contains(nombre) || destello
             capa.isHidden = !on
-            if on, let fr = tiras[nombre] { capa.contents = fr[cuadro] }
+            if on, let fr = tiras[nombre] { capa.contents = fr[destello ? 12 - destelloCuadros : cuadro] }
         }
         CATransaction.commit()
+        destelloCuadros = max(0, destelloCuadros - 1)
+    }
+
+    /// Cada toque vibra suave; el tercero seguido oculta los moods descartables a la vista, o los devuelve si no hay.
+    @objc private func tocado() {
+        let ahora = Date()
+        toques = toques.filter { ahora.timeIntervalSince($0) < 0.8 } + [ahora]
+        guard toques.count >= 3 else { vibrador.pulso(fuerte: false); return }
+        toques = []
+        leerDescartes()
+        let visibles = estado.intersection(descartables).filter { descartados[$0] != ocurrencia($0, ahora) }
+        if !visibles.isEmpty { for m in visibles { descartados[m] = ocurrencia(m, ahora) } }
+        else if !descartados.isEmpty { descartados = [:] }
+        else { vibrador.pulso(fuerte: false); return }
+        guardarDescartes()
+        vibrador.pulso(fuerte: true)
+        destelloCuadros = 12
+        actualizarEstado()
     }
 
     // MARK: - Estado
@@ -246,9 +281,46 @@ class NyanCat: NSObject, BTTPluginInterface {
             if CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: inputCualquiera) > 300 { e.insert("inactivo") }
             e.formUnion(estadosDeCalendario(Date()))
         }
+        leerDescartes()
+        let ahora = Date()
+        // Se olvidan los descartes de ocurrencias pasadas; los de apps, solo al dejar la app (no al forzar estados).
+        let vigentes = descartados.filter { m, o in
+            o.isEmpty ? (e.contains(m) || !forzado.isEmpty) : o == ocurrencia(m, ahora)
+        }
+        if vigentes != descartados { descartados = vigentes; guardarDescartes() }
+        estado = e
+        e.subtract(descartados.keys)
         activas = zonas.compactMap { reglas in reglas.first { $0.estados.isEmpty || !e.isDisjoint(with: $0.estados) }?.capa }
         let nuevo = e.contains("cpu") ? 0.045 : e.contains("inactivo") ? 0.3 : 0.09
         if nuevo != intervalo { intervalo = nuevo; arrancar() }
+    }
+
+    /// Qué cuenta como «la misma vez» de un mood: el día para el café, el año para las fechas especiales
+    /// y, para los moods de apps (""), mientras la app siga al frente.
+    private func ocurrencia(_ mood: String, _ fecha: Date) -> String {
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: fecha)
+        let (a, m, d) = (c.year ?? 0, c.month ?? 0, c.day ?? 0)
+        switch mood {
+        case "manana": return "\(a)-\(m)-\(d)"
+        case "ano_nuevo": return "\(m == 1 ? a - 1 : a)"  // 31 dic y 1 ene son la misma fiesta
+        case "halloween", "navidad", "fiestas_patrias": return "\(a)"
+        default: return ""
+        }
+    }
+
+    /// Los descartes viven en un archivo para que los compartan todas las instancias del widget
+    /// (BTT crea una por grupo, p. ej. Global y "Music Playing") y sobrevivan a un reinicio de BTT.
+    private func leerDescartes() {
+        let fecha = (try? FileManager.default.attributesOfItem(atPath: rutaDescartes.path))?[.modificationDate] as? Date
+        guard fecha != descartesFecha else { return }
+        descartesFecha = fecha
+        descartados = (try? JSONDecoder().decode([String: String].self, from: Data(contentsOf: rutaDescartes))) ?? [:]
+    }
+
+    private func guardarDescartes() {
+        try? FileManager.default.createDirectory(at: rutaDescartes.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? JSONEncoder().encode(descartados).write(to: rutaDescartes, options: .atomic)
+        descartesFecha = (try? FileManager.default.attributesOfItem(atPath: rutaDescartes.path))?[.modificationDate] as? Date
     }
 
     private func estadosDeCalendario(_ fecha: Date) -> Set<String> {
@@ -355,5 +427,38 @@ class NyanCat: NSObject, BTTPluginInterface {
         let pct = Double(uso - p.uso) / Double(total - p.total)
         cpuAltaSeg = pct > 0.7 ? cpuAltaSeg + 1 : 0
         return cpuAltaSeg >= 3
+    }
+}
+
+/// Vibración del trackpad con MultitouchSupport (API privada, la misma que usa HapticKey): la Touch Bar no
+/// tiene motor propio y la API pública solo vibra con un dedo sobre el trackpad. Si la API cambia, no vibra.
+private final class Vibrador {
+    private typealias Crear = @convention(c) (UInt64) -> Unmanaged<CFTypeRef>?
+    private typealias Abrir = @convention(c) (CFTypeRef) -> Int32
+    private typealias Actuar = @convention(c) (CFTypeRef, Int32, UInt32, Float, Float) -> Int32
+    private var actuador: CFTypeRef?
+    private var actuar: Actuar?
+
+    init() {
+        guard let h = dlopen("/System/Library/PrivateFrameworks/MultitouchSupport.framework/MultitouchSupport", RTLD_NOW),
+              let c = dlsym(h, "MTActuatorCreateFromDeviceID"), let o = dlsym(h, "MTActuatorOpen"),
+              let a = dlsym(h, "MTActuatorActuate") else { return }
+        let crear = unsafeBitCast(c, to: Crear.self), abrir = unsafeBitCast(o, to: Abrir.self)
+        var it: io_iterator_t = 0
+        guard IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("AppleMultitouchDevice"), &it) == KERN_SUCCESS else { return }
+        defer { IOObjectRelease(it) }
+        while case let s = IOIteratorNext(it), s != 0 {  // el primer dispositivo con actuador (el trackpad)
+            defer { IOObjectRelease(s) }
+            guard let id = (IORegistryEntryCreateCFProperty(s, "Multitouch ID" as CFString, nil, 0)?.takeRetainedValue() as? NSNumber)?.uint64Value,
+                  let act = crear(id)?.takeRetainedValue(), abrir(act) == 0 else { continue }
+            actuador = act
+            actuar = unsafeBitCast(a, to: Actuar.self)
+            return
+        }
+    }
+
+    /// 3 = clic suave, 6 = clic fuerte (tipos de actuación del trackpad).
+    func pulso(fuerte: Bool) {
+        if let actuador, let actuar { _ = actuar(actuador, fuerte ? 6 : 3, 0, 0, 0) }
     }
 }

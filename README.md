@@ -10,6 +10,8 @@ An animated Nyan Cat for the MacBook Pro Touch Bar, built as a [BetterTouchTool]
 
 ![Full Touch Bar with the cat on the left](previews/touchbar-real.png)
 
+What's new in each version: [CHANGELOG.md](CHANGELOG.md).
+
 ## Variants
 
 | | State | How it's detected |
@@ -43,6 +45,14 @@ When two accessories want the same spot, a fixed priority decides (the `zonas` t
 - Eyes: shades > closed (night or idle) > tired
 - In front of the face: gamepad > popcorn > coffee
 - Top left: zzz > speech bubble
+
+## Hide a mood with a triple tap
+
+Tap the cat 3 times in a row to hide the decorative moods on screen: coffee, popcorn, chat bubble and special days. They stay hidden until their next occurrence: coffee, tomorrow at 7; a special day, next year; popcorn and the bubble, the next time you open a video or chat app. The dismissal is saved in `~/Library/Application Support/NyanCat/descartados.json`, so every cat widget (BTT makes one per group) shares it, and it survives a BTT restart. Another triple tap with nothing to hide brings them back. Moods that carry information (battery, CPU, network, microphone, camera) can't be hidden.
+
+![](previews/dismiss.gif)
+
+Each tap gives a light trackpad click, and the triple tap a strong one plus a burst of sparkles. The Touch Bar has no haptic engine, so the trackpad's is used through a private macOS API (the same one [HapticKey](https://github.com/niw/HapticKey) uses); if a macOS update changes it, the cat keeps working without haptics.
 
 ## Which apps trigger each mood
 

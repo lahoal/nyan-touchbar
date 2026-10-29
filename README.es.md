@@ -10,6 +10,8 @@ Un Nyan Cat animado para la Touch Bar de la MacBook Pro, hecho como plugin de [B
 
 ![Touch Bar completa con el gato a la izquierda](previews/touchbar-real.png)
 
+Novedades de cada versión: [CHANGELOG.md](CHANGELOG.md) (en inglés).
+
 ## Variantes
 
 | | Estado | Cómo se detecta |
@@ -43,6 +45,14 @@ Cuando dos accesorios ocupan el mismo lugar, una prioridad fija decide (tabla `z
 - Ojos: lentes > dormido (noche o inactivo) > cansado
 - Frente a la cara: control > palomitas > café
 - Arriba a la izquierda: zzz > globo
+
+## Ocultar un mood con triple toque
+
+Toca al gato 3 veces seguidas para ocultar los moods decorativos que estén a la vista: café, palomitas, globo de chat y fechas especiales. No vuelven hasta su próxima ocurrencia: el café, mañana a las 7; una fecha especial, el próximo año; las palomitas y el globo, la próxima vez que abras una app de video o de chat. El descarte se guarda en `~/Library/Application Support/NyanCat/descartados.json`, así que lo comparten todos los widgets del gato (uno por grupo de BTT) y sobrevive a un reinicio de BTT. Otro triple toque, sin nada que ocultar, los devuelve. Los moods que informan algo (batería, CPU, red, micrófono, cámara) no se ocultan.
+
+![](previews/dismiss.gif)
+
+Cada toque hace vibrar suave el trackpad y el triple toque, fuerte, con unas chispas. La Touch Bar no tiene motor de vibración, así que se usa el del trackpad mediante una API privada de macOS (la misma que usa [HapticKey](https://github.com/niw/HapticKey)); si una versión de macOS la cambia, el gato sigue funcionando sin vibrar.
 
 ## Qué apps activan cada mood
 
