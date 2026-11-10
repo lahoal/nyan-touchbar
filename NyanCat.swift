@@ -183,13 +183,22 @@ private let descartables: Set<String> = ["manana", "video", "chat", "halloween",
 class NyanCat: NSObject, BTTPluginInterface {
     weak var delegate: (any BTTTouchBarPluginDelegate)?
 
-    private var tiras: [String: [CGImage]] = [:]
     private var capas: [String: CALayer] = [:]
+    private var animadas: [CALayer] = []  // capas cuyos 12 cuadros no son todos iguales
+    private let gatoCapa = CALayer(), panelCapa = CALayer()  // el gato puede cambiar de velocidad sin arrastrar al panel
     private var activas: [String] = ["base"]
-    private var cuadro = 0
     private var intervalo = 0.09
-    private var timer: Timer?
     private var timerEstado: Timer?
+    private var finales: [String: DispatchWorkItem] = [:]
+    private var avisos: [NSObjectProtocol] = []
+    private var pantallaDormida = false
+    // Lo que cambia poco se lee cada tanto o llega por aviso: cada consulta a BTT o a macOS es una llamada a otro proceso.
+    private var vuelta = 0
+    private var forzadoLeido = ""
+    private var appReproductor = ""
+    private var frente = (id: "", pid: pid_t(0))
+    private var bateriaActual: (Int?, Bool) = (nil, false)
+    private var fuenteBateria: CFRunLoopSource?
     private var cpuPrevio: (uso: UInt64, total: UInt64)?
     private var cpuAltaSeg = 0
     private var config = ConfigApps()
@@ -204,13 +213,13 @@ class NyanCat: NSObject, BTTPluginInterface {
     private var rutaDescartes = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Application Support/NyanCat/descartados.json")
     private var toques: [Date] = []
-    private var transitorios: [String: Int] = [:]  // capa → cuadros que le quedan (destello, ráfaga, toque, deslizar)
+    private var transitorios: [String: Int] = [:]  // capa → cuadros que dura (destello, ráfaga, toque, deslizar)
     private var capasGato: [String] = []
     private var esquema = "base"  // colores del panel según la base del gato: base, matrix o destenida
     private var reproductor = false
     private var sonando = false
     private var sonandoOptimista: (valor: Bool, hasta: Date)?
-    private var paso = 1, pasoCuadros = 0  // siguiente: el gato corre al doble; anterior: rebobina
+    private var paso: Float = 1  // velocidad del gato: 2 tras «siguiente», -1 (rebobina) tras «anterior»
     private lazy var vibrador = Vibrador()
 
     private lazy var tecla: (Int) -> Void = { [weak self] in self?.teclaMedia($0) }
@@ -227,33 +236,62 @@ class NyanCat: NSObject, BTTPluginInterface {
         v.heightAnchor.constraint(equalToConstant: 30).isActive = true
         vc.view = v
         v.alSoltar = { [weak self] x, dx in self?.tocado(x, dx) }
-        for (nombre, b64) in sprites.sorted(by: { $0.key < $1.key }) {
+        v.alCambiarVentana = { [weak self] _ in self?.revisarPausa() }
+        gatoCapa.frame = NSRect(x: 0, y: 0, width: anchoGato, height: 30)
+        panelCapa.frame = NSRect(x: anchoGato, y: 0, width: anchoPanel, height: 30)
+        v.layer?.addSublayer(gatoCapa); v.layer?.addSublayer(panelCapa)
+        for (nombre, b64) in sprites {
             guard let data = Data(base64Encoded: b64), let src = CGImageSourceCreateWithData(data as CFData, nil),
-                  let tira = CGImageSourceCreateImageAtIndex(src, 0, nil) else { continue }
-            let w = tira.width / 12
-            tiras[nombre] = (0..<12).compactMap { tira.cropping(to: CGRect(x: $0 * w, y: 0, width: w, height: tira.height)) }
+                  let png = CGImageSourceCreateImageAtIndex(src, 0, nil) else { continue }
+            let (tira, fija) = decodificar(png)
             let capa = CALayer()
             let enPanel = ["cielo_", "panel_", "toque_", "desliza_"].contains { nombre.hasPrefix($0) }
-            capa.frame = nombre == "rafaga" ? v.bounds
-                : enPanel ? NSRect(x: anchoGato, y: 0, width: anchoPanel, height: 30) : NSRect(x: 0, y: 0, width: anchoGato, height: 30)
+            let padre = nombre == "rafaga" ? v.layer! : enPanel ? panelCapa : gatoCapa
+            capa.frame = padre.bounds
+            capa.contents = tira  // la tira completa, una sola vez; los cuadros se eligen con contentsRect
+            capa.contentsRect = recorte(0)
             capa.contentsGravity = .resize
             capa.magnificationFilter = .nearest
             capa.isHidden = true
             capa.zPosition = nombre == "rafaga" ? 3 : nombre.hasPrefix("base") || nombre.hasPrefix("cielo_") ? 0
                 : nombre.hasPrefix("panel_") ? 1 : 2
-            v.layer?.addSublayer(capa)
+            padre.addSublayer(capa)
             capas[nombre] = capa
+            if !fija && !esTransitoria(nombre) { animadas.append(capa) }
         }
         red.pathUpdateHandler = { [weak self] p in DispatchQueue.main.async { self?.hayRed = p.status == .satisfied } }
         red.start(queue: .global(qos: .utility))
+        let ws = NSWorkspace.shared.notificationCenter
+        if let app = NSWorkspace.shared.frontmostApplication { frente = (app.bundleIdentifier ?? "", app.processIdentifier) }
+        avisos.append(ws.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] n in
+            guard let self, let app = n.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
+            self.frente = (app.bundleIdentifier ?? "", app.processIdentifier)
+            if self.timerEstado != nil { self.actualizarEstado() }
+        })
+        bateriaActual = bateria()
+        let yo = Unmanaged.passUnretained(self).toOpaque()
+        fuenteBateria = IOPSNotificationCreateRunLoopSource({ ctx in
+            guard let ctx else { return }
+            let gato = Unmanaged<NyanCat>.fromOpaque(ctx).takeUnretainedValue()
+            gato.bateriaActual = gato.bateria()
+        }, yo)?.takeRetainedValue()
+        if let fuenteBateria { CFRunLoopAddSource(CFRunLoopGetMain(), fuenteBateria, .commonModes) }
+        for (nombre, dormida) in [(NSWorkspace.screensDidSleepNotification, true), (NSWorkspace.screensDidWakeNotification, false),
+                                  (NSWorkspace.sessionDidResignActiveNotification, true), (NSWorkspace.sessionDidBecomeActiveNotification, false)] {
+            avisos.append(ws.addObserver(forName: nombre, object: nil, queue: .main) { [weak self] _ in
+                self?.pantallaDormida = dormida; self?.revisarPausa()
+            })
+        }
         actualizarEstado()
-        arrancar()
-        timerEstado = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.actualizarEstado() }
-        RunLoop.main.add(timerEstado!, forMode: .common)
+        animarTodas()
         return vc
     }()
 
-    deinit { timer?.invalidate(); timerEstado?.invalidate(); red.cancel() }
+    deinit {
+        timerEstado?.invalidate(); red.cancel()
+        if let fuenteBateria { CFRunLoopRemoveSource(CFRunLoopGetMain(), fuenteBateria, .commonModes) }
+        avisos.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
+    }
 
     static func configurationFormItems() -> BTTPluginFormItem? { nil }
 
@@ -261,24 +299,88 @@ class NyanCat: NSObject, BTTPluginInterface {
 
     func touchBarViewController() -> NSViewController? { viewController }
 
-    private func arrancar() {
-        timer?.invalidate()
-        timer = Timer(timeInterval: intervalo, repeats: true) { [weak self] _ in self?.avanzar() }
-        RunLoop.main.add(timer!, forMode: .common)
+    // MARK: - Animación
+    // Core Animation cambia los cuadros por su cuenta (sin timer en el plugin): a la Touch Bar solo le llega
+    // un recorte distinto de la misma imagen, en vez de una imagen nueva por capa en cada cuadro.
+
+    private func recorte(_ cuadro: Int) -> CGRect { CGRect(x: CGFloat(cuadro) / 12, y: 0, width: 1.0 / 12, height: 1) }
+
+    private func esTransitoria(_ nombre: String) -> Bool {
+        nombre == "rafaga" || nombre == "destello" || nombre.hasPrefix("toque_") || nombre.hasPrefix("desliza_")
     }
 
-    private func avanzar() {
-        if pasoCuadros > 0 { pasoCuadros -= 1 } else { paso = 1 }
-        cuadro = (cuadro + paso + 12) % 12
-        CATransaction.begin(); CATransaction.setDisableActions(true)
-        for (nombre, capa) in capas {
-            let restante = transitorios[nombre]
-            let on = activas.contains(nombre) || restante != nil
-            capa.isHidden = !on
-            if on, let fr = tiras[nombre] { capa.contents = fr[restante.map { 12 - $0 } ?? cuadro] }
+    /// Animación por pasos de los cuadros `desde`…11. Todas las capas que se repiten parten en el mismo instante
+    /// (beginTime 1 en su tiempo local), así los accesorios se mueven al compás del cuerpo.
+    private func cuadros(desde: Int, inicio: CFTimeInterval, repetir: Bool) -> CAKeyframeAnimation {
+        let n = 12 - desde
+        let a = CAKeyframeAnimation(keyPath: "contentsRect")
+        a.values = (desde..<12).map { NSValue(rect: recorte($0)) }
+        a.keyTimes = (0...n).map { NSNumber(value: Double($0) / Double(n)) }
+        a.calculationMode = .discrete
+        a.duration = Double(n) * intervalo
+        a.beginTime = inicio
+        a.repeatCount = repetir ? .infinity : 1
+        a.fillMode = .forwards
+        a.isRemovedOnCompletion = false
+        return a
+    }
+
+    private func animarTodas() {
+        for capa in animadas { capa.add(cuadros(desde: 0, inicio: 1, repetir: true), forKey: "cuadros") }
+    }
+
+    /// Muestra una capa transitoria con los últimos n cuadros de su tira y la esconde al terminar.
+    private func unaVez(_ nombre: String, _ n: Int) {
+        guard let capa = capas[nombre] else { return }
+        transitorios[nombre] = n
+        capa.add(cuadros(desde: 12 - n, inicio: capa.convertTime(CACurrentMediaTime(), from: nil), repetir: false), forKey: "unaVez")
+        finales[nombre]?.cancel()
+        let fin = DispatchWorkItem { [weak self] in
+            self?.transitorios[nombre] = nil
+            self?.aplicarVisibilidad()
+            capa.removeAnimation(forKey: "unaVez")
         }
+        finales[nombre] = fin
+        DispatchQueue.main.asyncAfter(deadline: .now() + Double(n) * intervalo, execute: fin)
+        aplicarVisibilidad()
+    }
+
+    /// Solo toca las capas que cambian de visible a oculta o al revés.
+    private func aplicarVisibilidad() {
+        let deseadas = Set(activas).union(transitorios.keys)
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        for (nombre, capa) in capas where capa.isHidden == deseadas.contains(nombre) { capa.isHidden.toggle() }
         CATransaction.commit()
-        transitorios = transitorios.compactMapValues { $0 > 1 ? $0 - 1 : nil }
+    }
+
+    /// Cambia la velocidad del gato sin saltos durante `cuadros` cuadros y después la devuelve a 1.
+    private func velocidadGato(_ v: Float, cuadros: Int) {
+        func fijar(_ v: Float) {
+            let ahora = CACurrentMediaTime()
+            gatoCapa.timeOffset = gatoCapa.convertTime(ahora, from: nil)
+            gatoCapa.beginTime = ahora
+            gatoCapa.speed = v
+            paso = v
+        }
+        fijar(v)
+        finales["velocidad"]?.cancel()
+        let fin = DispatchWorkItem { fijar(1) }
+        finales["velocidad"] = fin
+        DispatchQueue.main.asyncAfter(deadline: .now() + Double(cuadros) * intervalo, execute: fin)
+    }
+
+    /// Revisa el estado una vez por segundo solo mientras el widget está en pantalla y la pantalla despierta.
+    /// BTT crea una instancia por grupo de la Touch Bar; las de los grupos que no se ven quedan quietas.
+    private func revisarPausa() {
+        let visible = viewController.view.window != nil && !pantallaDormida
+        if visible && timerEstado == nil {
+            actualizarEstado()
+            timerEstado = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.actualizarEstado() }
+            RunLoop.main.add(timerEstado!, forMode: .common)
+        } else if !visible {
+            timerEstado?.invalidate()
+            timerEstado = nil
+        }
     }
 
     /// x: dónde empezó el toque; dx: cuánto se movió el dedo hasta soltar. Sobre el botón, más de 12 pt es deslizar.
@@ -293,16 +395,16 @@ class NyanCat: NSObject, BTTPluginInterface {
         switch gesto {
         case 0:
             tecla(16)  // NX_KEYTYPE_PLAY
-            transitorios[(sonando ? "toque_a_play_" : "toque_a_pausa_") + esquema] = 8
+            unaVez((sonando ? "toque_a_play_" : "toque_a_pausa_") + esquema, 8)
             sonandoOptimista = (!sonando, Date().addingTimeInterval(2.5))  // BTT tarda ~1 s en enterarse
         case 1:
             tecla(17)  // NX_KEYTYPE_NEXT
-            transitorios["desliza_siguiente_" + esquema] = 8
-            (paso, pasoCuadros) = (2, 8)
+            unaVez("desliza_siguiente_" + esquema, 8)
+            velocidadGato(2, cuadros: 8)
         default:
             tecla(18)  // NX_KEYTYPE_PREVIOUS
-            transitorios["desliza_anterior_" + esquema] = 8
-            (paso, pasoCuadros) = (-1, 8)
+            unaVez("desliza_anterior_" + esquema, 8)
+            velocidadGato(-1, cuadros: 8)
         }
         actualizarEstado()
     }
@@ -330,7 +432,7 @@ class NyanCat: NSObject, BTTPluginInterface {
         else { vibrador.pulso(fuerte: false); return }
         guardarDescartes()
         vibrador.pulso(fuerte: true)
-        transitorios["destello"] = 12
+        unaVez("destello", 12)
         actualizarEstado()
     }
 
@@ -338,7 +440,13 @@ class NyanCat: NSObject, BTTPluginInterface {
 
     private func actualizarEstado() {
         var e = Set<String>()
-        let forzado = (delegate?.getVariable("nyan_forzar") as? String ?? "").trimmingCharacters(in: .whitespaces)
+        if vuelta % 5 == 0 {  // cada 5 s: variable de prueba, archivos de configuración y descartes
+            forzadoLeido = (delegate?.getVariable("nyan_forzar") as? String ?? "").trimmingCharacters(in: .whitespaces)
+            recargarConfig()
+            leerDescartes()
+        }
+        vuelta += 1
+        let forzado = forzadoLeido
         if !forzado.isEmpty {
             e = Set(forzado.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
             (reproductor, sonando) = (e.contains("musica") || e.contains("reproductor"), e.contains("musica"))
@@ -346,13 +454,15 @@ class NyanCat: NSObject, BTTPluginInterface {
             let v = delegate?.getVariable("BTTCurrentlyPlaying").map { "\($0)" }
             sonando = v == "1" || v == "1.0"
             if let o = sonandoOptimista, Date() < o.hasta { sonando = o.valor }
-            let app = delegate?.getVariable("BTTCurrentlyPlayingApp") as? String ?? ""
-            reproductor = !app.isEmpty || sonando
+            if !sonando && vuelta % 3 == 1 {  // el reproductor en pausa aparece o desaparece rara vez
+                appReproductor = delegate?.getVariable("BTTCurrentlyPlayingApp") as? String ?? ""
+            }
+            reproductor = !appReproductor.isEmpty || sonando
             if sonando { e.insert("musica") }
             e.formUnion(estadosDeApp())
             if microfonoEnUso() { e.insert("microfono") }
             if camaraEnUso() { e.insert("videollamada") }
-            let (pct, cargando) = bateria()
+            let (pct, cargando) = bateriaActual
             if cargando { e.insert("cargando") } else if let pct, pct <= 20 { e.insert("bateria_baja") }
             if cpuAlta() { e.insert("cpu") }
             if !hayRed { e.insert("sin_red") }
@@ -361,7 +471,6 @@ class NyanCat: NSObject, BTTPluginInterface {
             if CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: inputCualquiera) > 300 { e.insert("inactivo") }
             e.formUnion(estadosDeCalendario(Date()))
         }
-        leerDescartes()
         let ahora = Date()
         // Se olvidan los descartes de ocurrencias pasadas; los de apps, solo al dejar la app (no al forzar estados).
         let vigentes = descartados.filter { m, o in
@@ -371,12 +480,13 @@ class NyanCat: NSObject, BTTPluginInterface {
         estado = e
         e.subtract(descartados.keys)
         let gato = zonas.compactMap { reglas in reglas.first { $0.estados.isEmpty || !e.isDisjoint(with: $0.estados) }?.capa }
-        if !capasGato.isEmpty && gato != capasGato && transitorios["destello"] == nil { transitorios["rafaga"] = 12 }
+        let rafaga = !capasGato.isEmpty && gato != capasGato && transitorios["destello"] == nil
         capasGato = gato
         esquema = gato.first.map { $0 == "base" ? "base" : String($0.dropFirst(5)) } ?? "base"  // base_matrix → matrix
         activas = gato + ["cielo_" + esquema, (reproductor ? (sonando ? "panel_pausa_" : "panel_play_") : "panel_apagado_") + esquema]
         let nuevo = e.contains("cpu") ? 0.045 : e.contains("inactivo") ? 0.3 : 0.09
-        if nuevo != intervalo { intervalo = nuevo; arrancar() }
+        if nuevo != intervalo { intervalo = nuevo; animarTodas() }
+        if rafaga { unaVez("rafaga", 12) } else { aplicarVisibilidad() }
     }
 
     /// Qué cuenta como «la misma vez» de un mood: el día para el café, el año para las fechas especiales
@@ -421,11 +531,11 @@ class NyanCat: NSObject, BTTPluginInterface {
 
     /// Moods por app al frente o, en navegadores, por el título de la ventana activa.
     private func estadosDeApp() -> Set<String> {
-        recargarConfig()
-        guard let app = NSWorkspace.shared.frontmostApplication, let id = app.bundleIdentifier else { return [] }
+        let (id, pid) = frente  // llega por aviso al cambiar de app
+        guard !id.isEmpty else { return [] }
         var e = Set(config.apps.filter { config.coincide(id, $0.value) }.keys)
         if config.coincide(id, config.navegadores) {
-            let titulo = tituloVentana(app.processIdentifier).lowercased()
+            let titulo = tituloVentana(pid).lowercased()
             if !titulo.isEmpty {
                 e.formUnion(config.titulos.filter { $0.value.contains { titulo.contains($0.lowercased()) } }.keys)
             }
@@ -547,9 +657,28 @@ private final class Vibrador {
     }
 }
 
-/// Vista del widget: avisa dónde empezó cada toque y cuánto se deslizó el dedo al soltarlo.
+/// Descomprime la tira PNG una sola vez (para que no se vuelva a decodificar al mostrarla) y dice si sus
+/// 12 cuadros son idénticos: esas capas no necesitan animación.
+private func decodificar(_ png: CGImage) -> (CGImage, fija: Bool) {
+    let (w, h) = (png.width, png.height)
+    guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+                              space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+          let datos = ctx.data else { return (png, false) }
+    ctx.draw(png, in: CGRect(x: 0, y: 0, width: w, height: h))
+    let ancho = w / 12 * 4, bytes = datos.assumingMemoryBound(to: UInt8.self)
+    let fija = (0..<h).allSatisfy { y in
+        let fila = bytes + y * w * 4
+        return (1..<12).allSatisfy { memcmp(fila, fila + $0 * ancho, ancho) == 0 }
+    }
+    return (ctx.makeImage() ?? png, fija)
+}
+
+/// Vista del widget: avisa dónde empezó cada toque, cuánto se deslizó el dedo al soltarlo y si entra o sale de pantalla.
 private final class VistaToques: NSView {
     var alSoltar: ((CGFloat, CGFloat) -> Void)?
+    var alCambiarVentana: ((Bool) -> Void)?
+
+    override func viewDidMoveToWindow() { alCambiarVentana?(window != nil) }
     private var inicio: [ObjectIdentifier: CGFloat] = [:]
 
     override init(frame: NSRect) { super.init(frame: frame); allowedTouchTypes = [.direct] }

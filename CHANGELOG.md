@@ -1,5 +1,68 @@
 # Changelog
 
+## v1.3.0 — 2026-11-10
+
+Same cat, same animation, much less work behind it. With the cat running, BetterTouchTool now uses about as much CPU as it does without the cat.
+
+### Results
+
+Measured on an M1 MacBook Pro (macOS 15.7.9, BTT 6.958), Claude in front, nothing playing, on battery. Each run is 60 s; versions were installed and measured in interleaved order, with the Touch Bar kept awake (`caffeinate -u`) so every run saw the same conditions.
+
+| Version | Runs | BetterTouchTool CPU (each run) | Average | BTT wakeups |
+|---|---|---|---|---|
+| v1.2.0 | 3 | 2.43 · 2.35 · 3.34 % | **2.7 %** | 1.1–1.7 per second |
+| Step 1: frames played by Core Animation | 4 | 1.35 · 2.26 · 2.48 · 1.94 % | 2.0 % | 0.0–0.1 per second |
+| Step 2 (this release): plus system notifications and spaced-out reads | 3 | 0.69 · 0.69 · 1.69 % | **1.0 %** | 0.1 per second |
+| Cat turned off (reference) | 2 | 1.48 · 0.87 % | 1.2 % | 0.1 per second |
+
+- CPU is a percentage of one core. Run-to-run noise in BTT is about ±0.5 points, so the gap between this release and having no cat at all is within noise.
+- An 8 s CPU profile of BTT (`sample`) shows the plugin's time on BTT's main thread dropping from 56 samples to 24.
+- TouchBarServer, the system process that draws the Touch Bar, stays at 2.3–4.2 % with or without the cat. Its cost depends on whether the Touch Bar is lit (about 0.5 % when it dims), not on the cat.
+
+### What was actually expensive
+
+The obvious suspect was the animation: a 90 ms timer that handed every visible layer a new image 11 times per second. Moving it to Core Animation removed the wakeups but only part of the CPU (step 1 in the table). The profile showed the rest was the once-per-second state check, and in particular three kinds of calls that go to another process:
+
+- **BTT variables.** Every `getVariable` call makes BTT ask macOS, through Accessibility, which app is in front. The plugin made three of these calls per second (`nyan_forzar`, `BTTCurrentlyPlaying`, `BTTCurrentlyPlayingApp`).
+- **The frontmost app.** `NSWorkspace.frontmostApplication` and its `bundleIdentifier` are looked up in LaunchServices every time.
+- **The battery.** `IOPSCopyPowerSourcesInfo` is a round trip to the power management daemon.
+
+### Changes
+
+**Animation**
+- Each layer now receives its whole sprite strip once, decoded up front, and a stepped `contentsRect` keyframe animation shows one frame at a time. Core Animation plays it; the plugin has no per-frame timer anymore.
+- All looping animations share the same start time, so accessories stay locked to the cat's bob even when they appear later.
+- Layers whose 12 frames are identical (the media button, for example) get no animation at all.
+- Only layers that switch between visible and hidden are touched when the mood changes.
+- Speed changes keep working without a timer: high CPU (double speed) and idle (slow motion) change the animation's duration; next/previous change the cat's layer speed (2× or −1×, which rewinds) for 8 frames and then restore it.
+- One-shot effects (the sparkle burst, the mood-change burst, the button's tap and swipe animations) are single-pass animations that hide themselves when they finish.
+
+**Only the visible cat does any work**
+- BTT creates one plugin instance per Touch Bar group (with the Nyan preset, one in Global and one in "Music Playing"). Before, both checked state every second. Now only the instance whose view is on screen does; the others stay idle until they're shown.
+- State checks also stop while the screens sleep or you switch to another user account, and resume when you come back.
+
+**Notifications instead of polling**
+- The frontmost app arrives with `NSWorkspace.didActivateApplicationNotification`, and its bundle ID and PID are kept until the next switch. Switching apps updates the cat right away instead of on the next tick.
+- Battery level and charging state arrive with an IOKit power-source notification.
+- Network status already came from `NWPathMonitor`.
+
+**Fewer reads of what rarely changes**
+- `nyan_forzar`, `apps.json` and the triple-tap dismissals are read every 5 s instead of every second. Forced states and edited app lists can take up to 5 s to show up.
+- `BTTCurrentlyPlayingApp` (whether a paused player is open) is read every 3 s, and only while nothing is playing.
+- Still checked every second: whether music is playing (play/pause also updates the button instantly on tap), the microphone, the camera, CPU load, idle time, heat, and the browser tab title when a browser is in front.
+
+### For developers
+
+- `pruebas/`: behavior tests that build the plugin the same way BTT does and exercise it with a fake BTT delegate, fake media keys and a temporary dismissals file. Run `python3 generar.py && zsh pruebas/correr.sh` (42 checks).
+- `pruebas/medir-cpu.sh`: the measuring script behind the table above. `zsh pruebas/medir-cpu.sh label 60` records the CPU of BetterTouchTool, TouchBarServer and WindowServer and BTT's wakeups over 60 s, keeping the Touch Bar awake while it runs.
+
+### Upgrading from v1.2.0
+
+1. Replace `~/Library/Application Support/BetterTouchTool/Plugins/NyanCat.swift` with the one from this release and confirm the compile prompt.
+2. Restart BTT (hot reload doesn't replace widgets that already exist).
+
+Nothing else changes: same moods, gestures, settings files and widget size.
+
 ## v1.2.0 — 2026-10-29
 
 A media button that lives next to the cat, and a clearer note on the one Chile-only mood.

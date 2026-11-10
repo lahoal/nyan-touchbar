@@ -114,9 +114,13 @@ python3 generar.py
 
 Las reglas de combinación están en `NyanCat.swift.in` (`zonas`); las listas de apps, en `apps.json`, que `generar.py` valida y embebe.
 
+Para revisar un cambio, `zsh pruebas/correr.sh` compila el plugin como lo hace BTT y corre las pruebas de comportamiento; `zsh pruebas/medir-cpu.sh etiqueta 60` mide la CPU de BetterTouchTool durante 60 s.
+
 ## Consumo
 
-Un timer de 90 ms cambia cuadros ya decodificados en capas de Core Animation, y el estado se revisa una vez por segundo. Con el gato andando, BetterTouchTool quedó en torno a 1–2 % de CPU en una MacBook Pro M1.
+Core Animation reproduce los cuadros por su cuenta: cada capa recibe su tira de sprites una sola vez y una animación por pasos mueve la ventana visible (`contentsRect`), así que el plugin no tiene un timer por cuadro. El cambio de app, la batería, la red, el reposo de pantalla y el cambio de usuario llegan como avisos del sistema; lo demás se revisa una vez por segundo, y solo en el widget que está en pantalla (BTT crea uno por grupo de la Touch Bar).
+
+Medido en una MacBook Pro M1 con la Touch Bar encendida, en corridas intercaladas de 60 s: BetterTouchTool promedió 2,7 % de CPU con la v1.2.0, 1,0 % con esta versión y 1,2 % con el gato apagado. La diferencia con no tener el gato está dentro del ruido entre corridas (±0,5 puntos).
 
 ## Créditos
 

@@ -114,9 +114,13 @@ python3 generar.py
 
 The stacking rules live in `NyanCat.swift.in` (`zonas`); the app lists in `apps.json`, which `generar.py` validates and embeds. The comments in the code are in Spanish.
 
+To check a change, `zsh pruebas/correr.sh` builds the plugin the way BTT does and runs the behavior tests; `zsh pruebas/medir-cpu.sh label 60` measures BetterTouchTool's CPU for 60 s.
+
 ## Performance
 
-A 90 ms timer swaps pre-decoded frames on Core Animation layers, and the state is re-checked once per second. With the cat running, BetterTouchTool sat at about 1–2 % CPU on an M1 MacBook Pro.
+Core Animation plays the frames on its own: each layer gets its whole sprite strip once and a stepped animation moves the visible window (`contentsRect`), so the plugin has no per-frame timer. App changes, battery, network, display sleep and user switching arrive as system notifications; the rest is checked once per second, and only by the widget that's actually on screen (BTT creates one per Touch Bar group).
+
+Measured on an M1 MacBook Pro with the Touch Bar awake, in interleaved 60 s runs: BetterTouchTool averaged 2.7 % CPU with v1.2.0, 1.0 % with this version, and 1.2 % with the cat turned off. The difference with no cat is within the run-to-run noise (±0.5 points).
 
 ## Credits
 
